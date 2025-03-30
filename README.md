@@ -3,7 +3,7 @@
 ## 自然言語処理 (NLP) & 大規模言語モデル (LLM)
 
 - LLM全般 & 性能評価
-	- [LLMs - You Can't Please Them All](documents/competitions/llms-you-cant-please-them-all.md)
+	- [LLMs - You Can't Please Them All](documents/llms-you-cant-please-them-all.md)
 	- [LLM Prompt Recovery](documents/llm-prompt-recovery.md)
 	- [LLM - Detect AI Generated Text](documents/llm-detect-ai-generated-text.md)
 - テキスト生成 & 評価
