@@ -13,7 +13,7 @@ https://www.kaggle.com/competitions/hms-harmful-brain-activity-classification
 
 **各解法の詳細:**
 
-**1位 **
+**1位**
 
 - **アプローチ:**  
   複数のサブモデルを組み合わせ、スペクトラム画像を処理する3D-CNN（x3d-l）モデル、2D画像としてraw EEGを扱うEfficientNetB5ベースのモデル、さらに両者を統合したダブルヘッドモデルのエンサンブルにより最終予測を実現。

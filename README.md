@@ -6,6 +6,7 @@
 	- [LLMs - You Can't Please Them All](documents/llms-you-cant-please-them-all.md)
 	- [LLM Prompt Recovery](documents/llm-prompt-recovery.md)
 	- [LLM - Detect AI Generated Text](documents/llm-detect-ai-generated-text.md)
+    - [LMSYS Chatbot Arena](documents/lmsys-chatbot-arena.md)
 - テキスト生成 & 評価
 	- [Learning Agency Lab - Automated Essay Scoring 2](documents/learning-agency-lab-automated-essay-scoring-2.md)
 	- [Linking Writing Processes to Writing Quality](documents/linking-writing-processes-to-writing-quality)
