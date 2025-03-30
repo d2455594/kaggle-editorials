@@ -4,7 +4,7 @@ tags:
 startdate: 2024-04-04
 enddate: 2024-06-11
 ---
-# # BirdCLEF 2024
+# BirdCLEF 2024
 https://www.kaggle.com/competitions/birdclef-2024
 
 
