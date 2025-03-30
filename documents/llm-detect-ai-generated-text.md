@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/llm-detect-ai-generated-text
 startdate: 2023-11-01
 enddate: 2024-01-23
 ---
+# LLM - Detect AI Generated Text
+https://www.kaggle.com/competitions/llm-detect-ai-generated-text
+
 **全体的な傾向:**
 
 このコンペでは、エッセイが人間によって書かれたものか、AIによって生成されたものかを検出することが課題です。上位解法では、大規模言語モデル（LLM、特にDeBERTa-v3 largeやMistral 7b）のファインチューニングと、伝統的な機械学習手法（TF-IDF、SVM、ランダムフォレスト、GBDT）の組み合わせが一般的です。敵対的生成、データ拡張、疑似ラベリング、アンサンブル学習、そして特に、多様で大規模な学習データの作成が重要なテクニックとして用いられました。

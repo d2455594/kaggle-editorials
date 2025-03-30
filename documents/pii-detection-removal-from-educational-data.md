@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data
 startdate: 2024-01-18
 enddate: 2024-04-24
 ---
+# PII Detection & Removal from Educational Data
+https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data
+
 **全体的な傾向:**
 
 上位解法は、Transformerベースの言語モデル（特にDeBERTa-v3 large）のファインチューニングが中心でした。外部データ（特にAI生成データ）の活用、カスタムヘッドの設計、データ拡張、そしてルールベースのポストプロセッシングが重要なテクニックとして用いられました。また、トークナイザの特性を理解し、それに対応した処理を行うこともスコア向上に貢献しました。

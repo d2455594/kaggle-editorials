@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/fide-google-efficiency-chess-ai-challenge
 startdate: 2024-09-13
 enddate: 2024-12-13
 ---
+# FIDE & Google Efficient Chess AI Challenge
+https://www.kaggle.com/competitions/fide-google-efficiency-chess-ai-challenge
+
 **全体的な傾向:**
 
 このコンペでは、非常に限られたリソース（サイズ、メモリ、時間）の中で、強いチェスエンジンを開発することが課題です。上位解法では、既存の強力なオープンソースエンジン（Stockfish、Cfish）をベースとし、リソース制約を満たすように軽量化するアプローチが主流です。評価関数（NNUEまたはHCE）、探索アルゴリズムの最適化、パラメータチューニング（SPSA）、バイナリサイズの圧縮などが重要なテクニックとして活用されています。

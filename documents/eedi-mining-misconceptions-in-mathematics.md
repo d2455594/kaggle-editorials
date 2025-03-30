@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics
 startdate: 2024-09-13
 enddate: 2024-12-13
 ---
+# Eedi - Mining Misconceptions in Mathematics
+https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics
+
 **全体的な傾向:**
 
 このコンペでは、数学の多肢選択式問題の不正解に対して、生徒が抱いている可能性のある誤概念を特定し、ランキング付けすることが課題でした。上位解法では、Retrieve-and-Rerankのフレームワークが広く採用されています。大規模言語モデル（LLM）を活用したアプローチが主流であり、特にQwenシリーズのモデルが頻繁に登場します。合成データの生成、知識蒸留、Chain of Thought（CoT）、ハードネガティブサンプリング、リストワイズランキングなどが重要なテクニックとして用いられています。また、 unseen な誤概念への対応も重要なポイントとなっています。

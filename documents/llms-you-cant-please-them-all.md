@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/llms-you-cant-please-them-all
 startdate: 2024-12-04
 enddate: 2025-03-05
 ---
+# LLMs - You Can't Please Them All
+https://www.kaggle.com/competitions/llms-you-cant-please-them-all
+
 **全体的な傾向**
 
 上位解法は、大規模言語モデル（LLM）を評価する「審判」の脆弱性を突く敵対的なアプローチが主流でした。特定のフレーズや単語の組み合わせ（多くの場合、英語以外の言語や意味不明な文字列を含む）を用いることで、審判に意図したスコア（0または9）を出力させることに成功しています。また、コンペティションの評価指標や、使用されたLLM（Gemma、Llama、Qwen、Phiなど）の特性を理解することも重要でした。

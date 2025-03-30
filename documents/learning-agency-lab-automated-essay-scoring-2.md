@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/learning-agency-lab-automated-essay-scoring-2
 startdate: 2024-04-04
 enddate: 2024-07-03
 ---
+# Learning Agency Lab - Automated Essay Scoring 2.0
+https://www.kaggle.com/competitions/learning-agency-lab-automated-essay-scoring-2
+
 **全体的な傾向**
 
 上位解法では、Transformerベースの言語モデル（特にDeBERTa）のアンサンブルが主流でした。データセットの特性（Persuade Corpus 2.0とKaggle-onlyデータ）を考慮した学習戦略や、疑似ラベリング、閾値最適化などが重要なテクニックとして用いられました。

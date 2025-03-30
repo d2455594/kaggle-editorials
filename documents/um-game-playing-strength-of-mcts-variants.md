@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants
 startdate: 2024-09-06
 enddate: 2024-12-03
 ---
+# UM - Game-Playing Strength of MCTS Variants
+https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants
+
 **全体的な傾向:**
 
 このコンペでは、モンテカルロ木探索（MCTS）の変種のゲームプレイングの強さを予測することが課題です。上位解法は、主に古典的な機械学習モデル（CatBoost、LightGBM、TabM、線形回帰）と、ニューラルネットワーク（MLP、DeepTables）のアンサンブルを使用しています。特徴量エンジニアリングが非常に重要であり、ゲームのルールセットから抽出される特徴量や、MCTSのシミュレーション結果から得られる特徴量などが活用されています。データ拡張も一部で試みられています。

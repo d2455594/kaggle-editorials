@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/rsna-2024-lumbar-spine-degenerative-classification
 startdate: 2024-05-17
 enddate: 2024-10-09
 ---
+# RSNA 2024 Lumbar Spine Degenerative Classification
+https://www.kaggle.com/competitions/rsna-2024-lumbar-spine-degenerative-classification
+
 **全体的な傾向:**
 
 このコンペでは、腰椎のMRI画像から椎間板ヘルニアや脊柱管狭窄などの変性疾患の重症度を分類することが課題です。上位解法は、大きく分けて2つのステージで構成されています。最初のステージでは、病変領域のキーポイント（座標）を検出し、2番目のステージでは、その領域を切り出した画像を用いて疾患の重症度を分類します。3D CNN、2D CNN、2.5D CNN、Transformer、LSTM、Attention機構など、多様なアーキテクチャが用いられ、データ拡張、アンサンブル学習、ラベルノイズへの対処などが重要なテクニックとして活用されています。

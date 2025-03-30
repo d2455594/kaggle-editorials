@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/santa-2024
 startdate: 2024-11-22
 enddate: 2025-02-01
 ---
+# Santa 2024 - The Perplexity Permutation Puzzle
+https://www.kaggle.com/competitions/santa-2024
+
 **全体的な傾向:**
 
 このコンペでは、テキストの並べ替え問題が出題され、perplexityを最小化することが目標でした。上位解法は、主に局所探索法（近傍探索）、シミュレーテッドアニーリング（SA）、ビームサーチなどのメタヒューリスティックアルゴリズムを用いています。初期解の生成方法や、局所最適解からの脱出戦略（キック操作）、そして、問題ごとの特性に合わせたアルゴリズムの調整が重要でした。

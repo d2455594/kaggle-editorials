@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/linking-writing-processes-to-writing-quality
 startdate: 2023-10-03
 enddate: 2024-01-10
 ---
+# Linking Writing Processes to Writing Quality
+https://www.kaggle.com/competitions/linking-writing-processes-to-writing-quality
+
 **全体的な傾向**
 
 上位解法では、キーボード操作ログから再構築されたエッセイテキストと、そこから抽出された様々な特徴量を活用するアプローチが主流でした。Transformerベースの言語モデル（特にDeBERTa）や、Gradient Boosting Machine（LightGBM、XGBoost、CatBoost）などの機械学習モデルが広く用いられています。データクリーニング、外部データの利用、特徴量エンジニアリング、モデルアンサンブルなどが重要なテクニックとして用いられました。

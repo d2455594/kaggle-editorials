@@ -1,10 +1,13 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions
+url: 
 startdate: 2024-12-05
 enddate: 2025-03-06
 ---
+# CIBMTR - Equity in post-HCT Survival Predictions
+https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions
+
 **全体的な傾向**
 
 上位解法では、生存時間予測（`efs_time`）とイベント発生の有無（`efs`）を別々に扱う、**2段階のアプローチ**が主流でした。具体的には、イベント発生確率を予測する分類モデルと、イベントが発生した場合の生存時間を予測する回帰モデルを独立して学習させ、その後、これらの予測値を組み合わせて最終的なリスクスコアを算出する手法が多くのチームで採用されています。

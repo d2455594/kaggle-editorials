@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/llm-prompt-recovery
 startdate: 2024-02-28
 enddate: 2024-04-17
 ---
+# LLM Prompt Recovery
+https://www.kaggle.com/competitions/llm-prompt-recovery
+
 **全体的な傾向:**
 
 このコンペでは、T5モデルによってエンコードされたプロンプトの埋め込みベクトルから、元のプロンプトテキストを復元することが課題です。上位解法では、「平均プロンプト」と呼ばれる、多くのプロンプトに共通する要素を捉えた固定のプロンプトをベースラインとし、そこに大規模言語モデル（LLM、特にMistral 7BやGemma）の予測や、特定のキーワード（`lucrarea`）を組み合わせるアプローチが主流でした。埋め込み空間での操作や、検索アルゴリズムを用いたプロンプトの最適化、そして、T5モデルのトークナイザの特性を悪用するテクニックも重要な要素となりました。

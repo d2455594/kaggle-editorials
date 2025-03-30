@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/ariel-data-challenge-2024
 startdate: 2024-08-02
 enddate: 2024-11-01
 ---
+# NeurIPS - Ariel Data Challenge 2024
+https://www.kaggle.com/competitions/ariel-data-challenge-2024
+
 **全体的な傾向**
 
 上位解法は、系外惑星のトランジット深度をノイズの多い分光信号から推定する課題に取り組みました。物理モデルに基づいたアプローチ（ベイズ推論、多項式フィッティング）と、データ駆動型のアプローチ（ガウス過程回帰、オートエンコーダ、非負値行列因子分解）の両方が見られました。信号のキャリブレーション、ノイズ除去、トランジット区間の正確な検出、波長間の相関の考慮、そして不確実性の推定が重要なテクニックとして用いられました。

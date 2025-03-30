@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/image-matching-challenge-2024
 startdate: 2024-03-26
 enddate: 2024-06-04
 ---
+# Image Matching Challenge 2024 - Hexathlon
+https://www.kaggle.com/competitions/image-matching-challenge-2024
+
 **全体的な傾向:**
 
 このコンペでは、様々な条件下で撮影された画像群から詳細な3Dマップを生成することが課題です。上位解法では、疎な特徴点検出器（ALIKED, SuperPoint, DISK, DeDoDe, SIFTなど）とそれに対応する特徴点マッチング器（LightGlue, SuperGlue, AdaLAM, Nearest Neighbor, Dual Softmaxなど）を組み合わせたパイプラインが主流です。3D復元にはCOLMAPが広く利用されています。透明なオブジェクトを含むシーンに対する特別な処理や、画像回転への対応、異なるスケールやクロップからの特徴点抽出、アンサンブル学習などが重要なテクニックとして用いられています。

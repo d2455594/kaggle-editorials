@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/uspto-explainable-ai
 startdate: 2024-04-25
 enddate: 2024-07-25
 ---
+# USPTO - Explainable AI for Patent Professionals
+https://www.kaggle.com/competitions/uspto-explainable-ai
+
 **全体的な傾向:**
 
 このコンペでは、特許データに基づいて、与えられたターゲット特許と関連性の高い特許を検索するためのWhooshクエリを作成することが課題でした。上位解法は、主にキーワードベースの検索戦略と、クエリの最適化に重点を置いています。特に、ANDとOR演算子を効率的に使用し、トークン数を削減するテクニック、そして、ターゲット特許にのみ関連するキーワードを選択することが重要でした。また、一部の解法では、コンペティションの評価指標やデータ特性に関する深い洞察に基づいた「魔法」のようなテクニックも用いられています。

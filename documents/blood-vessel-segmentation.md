@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/blood-vessel-segmentation
 startdate: 2023-11-08
 enddate: 2024-02-07
 ---
+# SenNet + HOA - Hacking the Human Vasculature in 3D
+https://www.kaggle.com/competitions/blood-vessel-segmentation
+
 **全体的な傾向:**
 
 このコンペでは、腎臓の3D MRI画像から血管をセグメンテーションすることが課題です。上位解法は、主に2Dおよび2.5DのU-Netベースのアーキテクチャと、3D U-Netを使用しています。データ拡張、特に3D回転を含む拡張、損失関数の工夫（Focal Loss、Dice Loss、Boundary Loss、カスタム損失）、そしてテスト時のTTA（Test Time Augmentation）が重要なテクニックとして用いられています。また、複数の軸（xy, xz, yz）からの推論結果を組み合わせるアンサンブルも効果的でした。

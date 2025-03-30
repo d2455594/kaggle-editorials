@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/predict-energy-behavior-of-prosumers
 startdate: 2023-11-03
 enddate: 2024-05-01
 ---
+# Enefit - Predict Energy Behavior of Prosumers
+https://www.kaggle.com/competitions/predict-energy-behavior-of-prosumers
+
 **全体的な傾向:**
 
 このコンペでは、プロシューマー（需要家であり発電者でもある）のエネルギー行動を予測することが課題です。上位解法では、時系列データの特徴を捉えるためのテクニックと、機械学習モデルのアンサンブルが広く用いられています。XGBoost、LightGBM、GRUといったモデルが頻繁に登場し、特徴量エンジニアリング（特にラグ特徴量）、検証戦略、オンライン学習などが重要な要素となっています。生産（production）と消費（consumption）を別々にモデル化するアプローチも一般的です。

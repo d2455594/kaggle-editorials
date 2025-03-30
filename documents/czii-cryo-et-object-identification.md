@@ -2,10 +2,12 @@
 tags:
   - Kaggle
   - 物体検出
-url: https://www.kaggle.com/competitions/czii-cryo-et-object-identification
 startdate: 2024-11-07
 enddate: 2025-02-06
 ---
+# CZII - CryoET Object Identification
+https://www.kaggle.com/competitions/czii-cryo-et-object-identification
+
 **全体的な傾向:**
 
 このコンペでは、3Dボリュームデータからの物体検出が課題であり、セグメンテーションベースの手法とヒートマップベースの手法が上位で採用されています。3D U-Netを基本としたアーキテクチャが多く見られ、データ拡張やアンサンブルも重要なテクニックとして活用されています。外部データ（シミュレーションデータ）の利用も一部で見られます。

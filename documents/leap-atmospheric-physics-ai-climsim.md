@@ -1,10 +1,12 @@
 ---
 tags:
   - Kaggle
-url: https://www.kaggle.com/competitions/leap-atmospheric-physics-ai-climsim
 startdate: 2024-04-19
 enddate: 2024-06-16
 ---
+# LEAP - Atmospheric Physics using AI (ClimSim)
+https://www.kaggle.com/competitions/leap-atmospheric-physics-ai-climsim
+
 **全体的な傾向:**
 
 このコンペでは、気象シミュレーションの出力を予測することが課題であり、時系列データモデリングが中心となります。上位解法では、Transformer、LSTM、CNN、Squeezeformerなどの様々なニューラルネットワークアーキテクチャが用いられています。データの正規化、特徴量エンジニアリング（特に物理法則に基づいた特徴量）、損失関数の工夫（MAE、Smooth L1 Loss、補助損失）、アンサンブル学習などが重要なテクニックとして活用されています。大規模なデータセット（Hugging FaceのLEAPデータ）の利用も一般的です。
