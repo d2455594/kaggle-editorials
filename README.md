@@ -55,7 +55,7 @@
     - [EEDI - Mining Misconceptions in Mathematics](documents/eedi-mining-misconceptions-in-mathematics.md)
 - 天文学
 	- [ARIEL Data Challenge 2024](documents/ariel-data-challenge-2024.md)
-- その他
+- サンタ
     - [Santa 2024](documents/santa-2024.md)
     
 
