@@ -26,6 +26,12 @@
 
 ---
 
+## 音声・音響処理
+
+- [BirdCLEF 2024](documents/birdclef-2024.md)
+
+---
+
 ## 時系列データ分析 & 予測
 
 - エネルギー
@@ -57,7 +63,7 @@
 	- [ARIEL Data Challenge 2024](documents/ariel-data-challenge-2024.md)
 - サンタ
     - [Santa 2024](documents/santa-2024.md)
-    
+    - [Santa 2023](documents/santa-2023.md)    
 
 
 
