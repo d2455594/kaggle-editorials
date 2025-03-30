@@ -22,6 +22,7 @@
 	- [CZII Cryo-ET Object Identification](documents/czii-cryo-et-object-identification.md)
 	- [RSNA 2024 Lumbar Spine Degenerative Classification](documents/rsna-2024-lumbar-spine-degenerative-classification.md)
 	- [Blood Vessel Segmentation](documents/blood-vessel-segmentation.md)
+	- [UBC Ovarian Cancer Subtype Classification and Outlier Detection (UBC-OCEAN)](documents/UBC-OCEAN.md.md)
 - 画像マッチング
 	- [Image Matching Challenge 2024](documents/image-matching-challenge-2024.md)
 
