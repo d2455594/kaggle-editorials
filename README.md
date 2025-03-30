@@ -50,6 +50,8 @@
 
 - 生存予測
 	- [Equity - Post HCT Survival Predictions](documents/equity-post-HCT-survival-predictions.md)
+- 疾患検出&診断
+	- [HMS - Harmful Brain Activity Classification](documents/hms-harmful-brain-activity-classification.md)
 
 ---
 
