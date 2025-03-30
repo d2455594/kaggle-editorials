@@ -1,6 +1,7 @@
 ---
 tags:
   - Kaggle
+  - ベイズ推論
 startdate: 2024-08-02
 enddate: 2024-11-01
 ---

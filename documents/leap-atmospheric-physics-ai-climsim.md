@@ -1,6 +1,7 @@
 ---
 tags:
   - Kaggle
+  - 気象
 startdate: 2024-04-19
 enddate: 2024-06-16
 ---

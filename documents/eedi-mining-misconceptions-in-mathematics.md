@@ -1,6 +1,7 @@
 ---
 tags:
   - Kaggle
+  - 教育
 startdate: 2024-09-13
 enddate: 2024-12-13
 ---

@@ -8,6 +8,7 @@
 	- [LLM - Detect AI Generated Text](documents/llm-detect-ai-generated-text.md)
 - テキスト生成 & 評価
 	- [Learning Agency Lab - Automated Essay Scoring 2](documents/learning-agency-lab-automated-essay-scoring-2.md)
+	- [Linking Writing Processes to Writing Quality](documents/linking-writing-processes-to-writing-quality)
 - 情報抽出 & 意味理解
 	- [USPTO - Explainable AI](documents/uspto-explainable-ai.md)
 	- [PII Detection: Removal from Educational Data](documents/pii-detection-removal-from-educational-data.md)
@@ -52,9 +53,11 @@
     - [LEAP - Atmospheric Physics - AI (ClimSim)](documents/leap-atmospheric-physics-ai-climsim.md)
 - 教育
     - [EEDI - Mining Misconceptions in Mathematics](documents/eedi-mining-misconceptions-in-mathematics.md)
+- 天文学
+	- [ARIEL Data Challenge 2024](documents/ariel-data-challenge-2024.md)
 - その他
     - [Santa 2024](documents/santa-2024.md)
-    - [ARIEL Data Challenge 2024](documents/ariel-data-challenge-2024.md)
+    
 
 
 

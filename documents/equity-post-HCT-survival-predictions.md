@@ -1,6 +1,7 @@
 ---
 tags:
   - Kaggle
+  - 生存予測
 url: 
 startdate: 2024-12-05
 enddate: 2025-03-06

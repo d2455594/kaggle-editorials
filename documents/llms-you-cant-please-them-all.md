@@ -1,6 +1,8 @@
 ---
 tags:
   - Kaggle
+  - LLM
+  - NLP
 startdate: 2024-12-04
 enddate: 2025-03-05
 ---

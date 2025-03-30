@@ -1,6 +1,8 @@
 ---
 tags:
   - Kaggle
+  - 強化学習
+  - ゲームAI
 startdate: 2024-09-06
 enddate: 2024-12-03
 ---

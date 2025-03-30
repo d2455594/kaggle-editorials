@@ -1,6 +1,8 @@
 ---
 tags:
   - Kaggle
+  - テキスト生成
+  - NLP
 startdate: 2024-04-04
 enddate: 2024-07-03
 ---

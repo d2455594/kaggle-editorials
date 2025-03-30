@@ -1,6 +1,8 @@
 ---
 tags:
   - Kaggle
+  - 画像マッチング
+  - 画像認識処理
 startdate: 2024-03-26
 enddate: 2024-06-04
 ---

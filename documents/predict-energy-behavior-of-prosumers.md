@@ -1,6 +1,8 @@
 ---
 tags:
   - Kaggle
+  - 時系列データ分析
+  - エネルギー
 startdate: 2023-11-03
 enddate: 2024-05-01
 ---
