@@ -19,9 +19,9 @@
 ## コンピュータビジョン & 画像処理
 
 - 物体検出 & セグメンテーション
-	- [CZII Cryo-ET Object Identification](documents/czii-cryo-et-object-identification.md)
+	- [CZII - CryoET Object Identification](documents/czii-cryo-et-object-identification.md)
 	- [RSNA 2024 Lumbar Spine Degenerative Classification](documents/rsna-2024-lumbar-spine-degenerative-classification.md)
-	- [Blood Vessel Segmentation](documents/blood-vessel-segmentation.md)
+	- [SenNet + HOA - Hacking the Human Vasculature in 3D](documents/blood-vessel-segmentation.md)
 	- [UBC Ovarian Cancer Subtype Classification and Outlier Detection (UBC-OCEAN)](documents/UBC-OCEAN.md.md)
 - 画像マッチング
 	- [Image Matching Challenge 2024](documents/image-matching-challenge-2024.md)
@@ -37,7 +37,7 @@
 ## 時系列データ分析 & 予測
 
 - エネルギー
-	- [Predict Energy Behavior of Prosumers](documents/predict-energy-behavior-of-prosumers.md)
+	- [Enefit - Predict Energy Behavior of Prosumers](documents/predict-energy-behavior-of-prosumers.md)
     
 ---
 
@@ -51,7 +51,7 @@
 ## 医療 & バイオインフォマティクス
 
 - 生存予測
-	- [Equity - Post HCT Survival Predictions](documents/equity-post-HCT-survival-predictions.md)
+	- [CIBMTR - Equity in post-HCT Survival Predictions](documents/equity-post-HCT-survival-predictions.md)
 - 疾患検出&診断
 	- [HMS - Harmful Brain Activity Classification](documents/hms-harmful-brain-activity-classification.md)
 
@@ -64,10 +64,10 @@
 - 教育
     - [EEDI - Mining Misconceptions in Mathematics](documents/eedi-mining-misconceptions-in-mathematics.md)
 - 天文学
-	- [ARIEL Data Challenge 2024](documents/ariel-data-challenge-2024.md)
+	- [NeurIPS - Ariel Data Challenge 2024](documents/ariel-data-challenge-2024.md)
 - サンタ
-    - [Santa 2024](documents/santa-2024.md)
-    - [Santa 2023](documents/santa-2023.md)    
+    - [Santa 2024 - The Perplexity Permutation Puzzle](documents/santa-2024.md)
+    - [Santa 2023 - The Polytope Permutation Puzzle](documents/santa-2023.md)
 
 
 
