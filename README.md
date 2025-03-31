@@ -40,7 +40,7 @@
 ## 音声・音響処理
 
 - [BirdCLEF 2024](documents/birdclef-2024.md)
-- [Bengali.AI Speech Recognition](documents/bengaliai-speech)
+- [Bengali.AI Speech Recognition](documents/bengaliai-speech.md)
 
 ---
 
