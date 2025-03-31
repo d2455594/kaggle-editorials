@@ -1,7 +1,8 @@
 ---
-tags: 
-startdate: 
-enddate:
+tags:
+  - Kaggle
+startdate: 2023-03-16 
+enddate: 2023-06-15
 ---
 # Vesuvius Challenge - Ink Detection
 https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection
