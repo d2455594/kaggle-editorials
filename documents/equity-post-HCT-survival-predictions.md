@@ -54,7 +54,7 @@ https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions
 
 **各解法の詳細**
 
-**1位**
+**[1位](https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions/discussion/566550)**
 
 - **アプローチ:**
     - `efs == 0` の確率が高い患者には高いリスクスコアを与え、それ以外の場合は `efs_time` の順位に重点を置く。
@@ -80,7 +80,7 @@ https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions
     - **モデルの結合:** カスタム関数を用いて分類器の出力と回帰器の出力を結合。Optunaでハイパーパラメータを調整。
     - **アンサンブル:** 分類器と回帰器の組み合わせを作成し、最適な結合関数のパラメータを探索。Optunaで重みを最適化し、最終的な予測を生成。
 
-**2位**
+**[2位](https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions/discussion/566522)**
 
 - **アプローチ:**
     - SurvivalGANの論文を参考に、`efs` の分類と `efs_time` の回帰を分離。
@@ -104,7 +104,7 @@ https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions
     - **AutoGluonの利用:** 自動機械学習ライブラリAutoGluonでも高いスコアを達成。
     - **事後処理:** 分類器の出力をカスタムシグモイド関数でキャリブレーション。
 
-**3位**
+**[3位](https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions/discussion/566574)**
 
 - **アプローチ:**
     - 検証戦略を重視し、4分割CVを複数のランダムシードで評価。
@@ -125,7 +125,7 @@ https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions
     - **ノイズ除去:** 固定ハイパーパラメータ/アーキテクチャのモデルを複数の初期化シードで平均化。大きな回帰誤差を持つ観測値を学習データから除去（分類では過学習につながるため実施せず）。
     - **アンサンブル:** 回帰モデルを凸結合でブレンド、分類モデルをロジスティック回帰でスタッキング。ブレンドの重みは、複数のOOF予測に基づいてベイズ最適化で同時に最適化。
 
-**4位**
+**[4位](https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions/discussion/566528)**
 
 - **アプローチ:**
     - 完璧な解は、イベントなしの患者をリストの一番下に、イベントありの患者をイベント時間で順位付けすることに着目。
@@ -144,7 +144,7 @@ https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions
     - **順位予測の工夫:** ターゲットをランクパーセント（`rank(-time)/N`）とし、逆正規累積分布関数で変換（"z-score"）、予測後に正規累積分布関数で逆変換。
     - **アンサンブル:** 個々のモデルの予測値を重み付き和で結合（イベント確率と順位予測で異なる重みを使用）。
 
-**5位**
+**[5位](https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions/discussion/568339)**
 
 - **アプローチ:**
     - `efs` ラベルを予測するモデルAと、`efs == 1` の場合の `efs_time` のランクを予測するモデルBという2つのターゲットを使用。
@@ -171,7 +171,7 @@ https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions
     - **学習方法:** LGBは手動チューニング、CatBoostはAutoGluonと公開ノートブックのパラメータを使用、TabMは公開ノートブックをベースにチューニング（Cosine LR with Warm Restarts）、ODST Pairwise NNは固定エポック数で学習（SWA使用）、AutoGluonは多数のモデルとハイパーパラメータプリセットを使用。
     - **アンサンブル:** Greedy Ensemble Selection (GES) のカスタムバリアントを使用。モデルAとモデルBを個別にアンサンブルし、その後結合。
 
-**6位**
+**[6位](https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions/discussion/566686)**
 
 - **アプローチ:**
     - `efs == 1` の確率と、イベント発生時の期待生存時間をGBDTモデルで予測。
@@ -191,7 +191,7 @@ https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions
     - **クロスバリデーション:** 全てのモデルで5つのランダムシードを用いた20分割クロスバリデーションを実施。
     - **メタモデリング:** OOFデータを用いて、TabMモデルの出力とGBDTモデルの予測値の2次多項式特徴量を入力とする単層ニューラルネットワークを学習。
 
-**9位**
+**[9位](https://www.kaggle.com/competitions/equity-post-HCT-survival-predictions/discussion/566948)**
 
 - **アプローチ:**
     - `efs = 1` のデータでモデルを学習し、その予測値に `efs` が1になる確率を掛けて最終的な予測とする。
