@@ -33,6 +33,7 @@
 	- [Image Matching Challenge 2024](documents/image-matching-challenge-2024.md)
     - [Image Matching Challenge 2023](documents/image-matching-challenge-2023.md)
 - その他
+    - [Stable Diffusion - Image to Prompts](documents/stable-diffusion-image-to-prompts.md)
     - [Benetech - Making Graphs Accessible](documents/benetech-making-graphs-accessible.md)
 
 ---
@@ -41,6 +42,7 @@
 
 - [BirdCLEF 2024](documents/birdclef-2024.md)
 - [Bengali.AI Speech Recognition](documents/bengaliai-speech.md)
+- [BirdCLEF 2023](documents/birdclef-2023.md)
 
 ---
 
@@ -65,20 +67,27 @@
 - 疾患検出&診断
 	- [HMS - Harmful Brain Activity Classification](documents/hms-harmful-brain-activity-classification.md)
     - [RSNA 2023 Abdominal Trauma Detection](documents/rsna-2023-abdominal-trauma-detection.md)
+    - [Parkinson's Freezing of Gait Prediction](documents/tlvmc-parkinsons-freezing-gait-prediction.md)
+    - [AMP®-Parkinson's Disease Progression Prediction](documents/amp-parkinsons-disease-progression-prediction.md)
 - 生体信号処理
     - [Child Mind Institute - Detect Sleep States](documents/child-mind-institute-detect-sleep-states.md)
 - 手話認識
     - [Google - American Sign Language Fingerspelling Recognition](documents/asl-fingerspelling.md)
 - その他
     - [Stanford Ribonanza RNA Folding](documents/stanford-ribonanza-rna-folding.md)
+- 手話認識
+    - [Google - Isolated Sign Language Recognition](documents/asl-signs.md)
+
 ---
 
 ## その他
 
 - 気象・環境
     - [LEAP - Atmospheric Physics - AI (ClimSim)](documents/leap-atmospheric-physics-ai-climsim.md)
+    - [IceCube - Neutrinos in Deep Ice](documents/icecube-neutrinos-in-deep-ice.md)
 - 教育
     - [EEDI - Mining Misconceptions in Mathematics](documents/eedi-mining-misconceptions-in-mathematics.md)
+    - [Predict Student Performance from Game Play](documents/predict-student-performance-from-game-play.md)
 - 天文学
 	- [NeurIPS - Ariel Data Challenge 2024](documents/ariel-data-challenge-2024.md)
 - その他
