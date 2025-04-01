@@ -79,7 +79,7 @@ IceCubeニュートリノ検出器のデータからニュートリノの到来�
 
 **各解法の詳細**
 
-**[1位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/402857)**
+**[1位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/402976)**
 
 * **アプローチ:** EdgeConv + Transformer の組み合わせ。静的エッジ選択。カスタム損失関数。MLPによるスタッキング。
 * **アーキテクチャ:** EdgeConv層 + Transformer Encoder層。
@@ -90,7 +90,7 @@ IceCubeニュートリノ検出器のデータからニュートリノの到来�
     * **データ処理:** シーケンス長バケッティング (`collate_fn` で実装)。バッチごとのデータロード。
     * **スタッキング:** ベースモデルの出力を入力として3層MLPで最終予測。
 
-**[2位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/402843)**
+**[2位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/402882)**
 
 * **アプローチ:** Transformerベース。Fourier Encoding。相対時空間隔バイアス。シーケンス長マッチング。
 * **アーキテクチャ:** Transformer Encoder (BEiT風ブロック、一部カスタム相対バイアス付き)。CLSトークン使用。
@@ -102,7 +102,7 @@ IceCubeニュートリノ検出器のデータからニュートリノの到来�
     * **推論:** 長いシーケンス長 (768) で推論。
     * **アンサンブル:** 6モデルの出力ベクトルを加重平均 (vMFのκを考慮)。
 
-**[3位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/402792)**
+**[3位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/402888)**
 
 * **アプローチ:** Self-Attentionモデル (NanoGPTベース)。角度をビン分類。vMF Lossモデルとのスタッキング (XGBoost/HistGradientBoosting)。
 * **アーキテクチャ:** Self-Attention (Transformer Encoder)。MLP (スタッキング用)。XGBoost/HistGradientBoosting (スタッキング用)。
@@ -113,7 +113,7 @@ IceCubeニュートリノ検出器のデータからニュートリノの到来�
     * **学習:** シーケンス長パッキング。FlashAttention (FP16)。FP32に切り替え (安定性のため)。
     * **スタッキング:** Attentionモデル (分類) とMLPモデル (vMF) の予測を入力とし、XGBoost/HGBTで最終的な角度補正/選択を行う。入力にはモデルの信頼度指標 (確率/κ)、イベント長、Z座標なども使用。
 
-**[5位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/402951)**
+**[5位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/403398)**
 
 * **アプローチ:** TransformerとGraphNetの出力をLSTMメタモデルでスタッキング (どちらのモデル予測を採用するか選択)。
 * **アーキテクチャ:** Transformer Encoder (8層)。GraphNet (DynEdgeベース、改良版)。Bi-LSTM (3層、スタッキング用)。
@@ -123,7 +123,7 @@ IceCubeニュートリノ検出器のデータからニュートリノの到来�
     * **GraphNet特徴量:** (x,y,z,t,charge,auxiliary,QE,wrong_charge_dom,ice_absorption,ice_scatter)。kNN特徴量数を増加 (48)。LayerNorm化。
     * **スタッキング:** TransformerとGraphNetの最終層手前の埋め込みをLSTMの初期隠れ状態として入力。パルス列の一部もLSTMに入力。LSTMは2つのモデルのうちどちらの予測がより良いかを予測する。
 
-**[6位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/402914)**
+**[6位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/403153)**
 
 * **アプローチ:** GNN, Transformer, LSTM, SAKT (LSTM+CNN+Transformer) のアンサンブル。イベントのグループ別アンサンブル。
 * **アーキテクチャ:** GNN (DynEdgeベース、改良版)。Transformer。LSTM。SAKT。
@@ -133,7 +133,7 @@ IceCubeニュートリノ検出器のデータからニュートリノの到来�
     * **学習:** 複数ステップでLR変更、パルス数変更。
     * **グループアンサンブル:** イベントをパルス数やLineFitのZenith予測などに基づいて6グループ (後に13グループ) に分類し、グループごとに最適なモデル重みでアンサンブル。
 
-**[8位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/403001)**
+**[8位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/403713)**
 
 * **アプローチ:** GNN (DynEdge, GPS, GravNet) とLSTMのアンサンブル。高度なブレンディング。
 * **アーキテクチャ:** DynEdge, GPS, GravNet。LSTM (複数層)。Decision Tree Regressor (ブレンディング用)。
@@ -146,7 +146,7 @@ IceCubeニュートリノ検出器のデータからニュートリノの到来�
     * **TTA (GNN):** Z軸周り60度回転 x6。
     * **ブレンディング:** Decision Treeを用いて予測角度やパルス数などでBinを作成し、各Binで最適な線形結合の重みを学習。
 
-**[9位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/402888)**
+**[9位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/402849)**
 
 * **アプローチ:** 複数のGNN (DynEdgeベース) のアンサンブル + MLPスタッキング。代替アプローチとしてパルス数によるセグメント別モデル+ブレンド。
 * **アーキテクチャ:** DynEdgeベース GNN (Vanilla, Bigman, DynEmb)。MLP (スタッキング用)。
@@ -158,7 +158,7 @@ IceCubeニュートリノ検出器のデータからニュートリノの到来�
     * **セグメント別:** パルス数で10ビンに分割、組み合わせで4モデル学習、セグメントごとにブレンド。
     * **アンサンブル:** スタッキングモデルとセグメント別ブレンドモデルを60:40で最終ブレンド。
 
-**[10位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/402949)**
+**[10位](https://www.kaggle.com/competitions/icecube-neutrinos-in-deep-ice/discussion/402969)**
 
 * **アプローチ:** 複数LSTM/GRUモデルのアンサンブル。角度ビン分類と方向ベクトル回帰の両方を試行。
 * **アーキテクチャ:** GRU (3層、分類用)。LSTM (3層、回帰用)。Embedding層付きLSTM (3層、回帰用)。
