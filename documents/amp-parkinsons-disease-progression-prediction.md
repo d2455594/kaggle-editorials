@@ -87,7 +87,7 @@ enddate: 2023-05-19
 
 **各解法の詳細**
 
-**[1位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/412667)**
+**[1位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/411505)**
 
 * **アプローチ:** LGBM (分類) と MLP (回帰) の単純平均アンサンブル。**血液検査データ未使用**。
 * **アーキテクチャ:** LGBM (多クラス分類)、MLP (多層フィードフォワード)。
@@ -99,7 +99,7 @@ enddate: 2023-05-19
     * **CV:** Leave-One-Patient-Out CV。
     * **キーポイント:** 6ヶ月目/18ヶ月目の訪問有無が非常に重要。
 
-**[2位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/421414)**
+**[2位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/418143)**
 
 * **アプローチ:** MLPアンサンブル。タンパク質データはNPX値の患者内比率として限定的に使用。訪問月関連の特徴量を重視。
 * **アーキテクチャ:** MLP (異なる構造、パラメータ)。
@@ -110,7 +110,7 @@ enddate: 2023-05-19
     * **学習データ:** 特定の訪問月（0, 6, 12, 18, 24, 36, 48, 60, 72, 84）のデータのみ使用。
     * **アンサンブル:** 異なるラベル数、ネットワーク構造、パラメータを持つ複数のMLPモデルをブレンド。
 
-**[3位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/412866)**
+**[3位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/411546)**
 
 * **アプローチ:** 患者グルーピングと、血液検査データから生成した特徴ラベルに基づくルールベースの調整。
 * **アーキテクチャ:** ベースモデルは不明（LGBMも試したが不採用）。最終的には特徴ラベルの係数をグリッドサーチで決定。
@@ -120,7 +120,7 @@ enddate: 2023-05-19
     * **特徴ラベル生成:** 「非健康」グループに対し、タンパク質採取頻度（6ヶ月目、12ヶ月目）やUniProtのユニーク数、ペプチド変化量に基づいて、重症度を示唆する9種類のバイナリラベルを作成。
     * **モデリング:** ベースとなる予測値（モデル不明）に対し、生成した特徴ラベルを用いて係数を調整。係数はTrain+Public LBの両方で改善が見られるものを採用し、グリッドサーチで最適化。
 
-**[4位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/412580)**
+**[4位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/411398)**
 
 * **アプローチ:** 単一モデル（RAPIDS cuML SVR または TensorFlow MLP）。**血液検査データ未使用**。患者訪問日の情報に基づく特徴エンジニアリング。
 * **アーキテクチャ:** SVR (RAPIDS cuML)、MLP (10隠れ層 x 24ユニット, ReLU)。
@@ -131,7 +131,7 @@ enddate: 2023-05-19
     * **データ作成:** 元の各行を、予測期間（0, 6, 12, 24ヶ月後）に応じた4つの新しい行に変換し、各行に対応する訪問有無特徴量を設定。
     * **学習:** MLPはAdam (LR=1e-3 -> 1e-4) で30エポック学習。Dropout、BatchNorm不使用。
 
-**[5位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/412702)**
+**[5位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/411388)**
 
 * **アプローチ:** 患者グルーピングに基づき、グループごとに線形回帰またはIsotonic Regressionを適用。**血液検査データ未使用**。
 * **アーキテクチャ:** 線形回帰、Isotonic Regression。
@@ -141,7 +141,7 @@ enddate: 2023-05-19
     * **モデリング:** 識別されたグループと予測対象月に基づいて、線形回帰またはIsotonic Regressionによる予測値を使い分ける。
     * **特徴量:** グループ識別子、予測対象月のみ。
 
-**[8位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/412799)**
+**[8位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/411395)**
 
 * **アプローチ:** 患者グルーピングと区分線形回帰。
 * **アーキテクチャ:** 区分線形回帰モデル。
@@ -151,7 +151,7 @@ enddate: 2023-05-19
     * **モデリング:** グループごとに区分線形関数 (`y = a + b*x + c*max(0, x-60)`) をフィッティングし、UPDRSスコアを予測。`updrs_4` のみ60ヶ月以降をクリップ。
     * **初期ループ:** 初回訪問時などグループ判別不能な場合は、全データで学習した共通の係数を使用。過去データが蓄積され次第、グループ別係数に切り替え。
 
-**[9位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/413127)**
+**[9位](https://www.kaggle.com/competitions/amp-parkinsons-disease-progression-prediction/discussion/411380)**
 
 * **アプローチ:** ルールベースの患者分割と、複数モデルの重み付きアンサンブル。**血液検査データは最終的に不採用**。
 * **アーキテクチャ:** 線形回帰、CatBoost Regressor (Huber損失)、CatBoost Regressor (MAE損失)。

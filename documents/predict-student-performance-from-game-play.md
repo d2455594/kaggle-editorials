@@ -103,7 +103,7 @@ enddate: 2023-06-29
 
 **各解法の詳細**
 
-**[1位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420321)**
+**[1位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420217)**
 
 * **アプローチ:** XGBoost + NN (カスタムConv1D) の50/50アンサンブル。外部データ活用。堅牢なCVと効率性重視。
 * **アーキテクチャ:** XGBoost。NN: カスタムTimeEmbedding + カテゴリEmbedding -> WaveNet風Conv1Dバックボーン -> MLP/Skip接続Head。
@@ -116,7 +116,7 @@ enddate: 2023-06-29
     * **効率化:** TF Lite (NN)、Treelite (XGBoost)。
     * **アンサンブル:** 複数Fold/Seed/ソート順のモデルを平均。閾値0.625。
 
-**[2位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420319)**
+**[2位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420329)**
 
 * **アプローチ:** 単一LightGBMモデル。時間ベースの特徴量を重視。効率化に注力。
 * **アーキテクチャ:** LightGBM。
@@ -127,7 +127,7 @@ enddate: 2023-06-29
     * **効率化:** 特徴量生成コードにnumbaとC言語を多用。推論時間の大部分はLGBM予測。
     * **閾値:** 0.63。
 
-**[3位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420217)**
+**[3位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420235)**
 
 * **アプローチ:** GBDT (XGBoost, CatBoost) + NN (Transformer+LSTM) のアンサンブル。外部データ活用。多様なモデリング戦略。
 * **アーキテクチャ:** XGBoost, CatBoost。NN: GRU/LSTM -> Transformer Encoder (Conformer風/標準) -> BiLSTM+LSTM Head。
@@ -140,7 +140,7 @@ enddate: 2023-06-29
     * **ソート順:** GBDTはインデックス順/時間順の両方を試行。
     * **スタッキング:** GBDT群とNN群のoof予測を別々にLogistic Regressionでアンサンブルし、最終的に6:4で重み付け平均。
 
-**[4位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420264)**
+**[4位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420349)**
 
 * **アプローチ:** Transformer + XGBoost + CatBoost のアンサンブル。外部データ活用。
 * **アーキテクチャ:** 軽量Transformer (1層)。XGBoost。CatBoost。Linear Regression (スタッキング用)。
@@ -153,7 +153,7 @@ enddate: 2023-06-29
     * **スタッキング:** 各モデルの予測確率をメタ特徴量とし、問題ごとにLinear Regressionで最終予測。過去と未来の予測確率も入力。
     * **アンサンブル:** 3モデル x 3シードの平均を入力としてスタッキング。
 
-**[7位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420324)**
+**[7位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420119)**
 
 * **アプローチ:** 単一LightGBMモデル (Level Group別)。時間差分特徴量中心。効率化。
 * **アーキテクチャ:** LightGBM。
@@ -167,7 +167,7 @@ enddate: 2023-06-29
     * **効率化:** 特徴量計算にPythonリスト処理活用。推論にlleavesライブラリ使用。
     * **閾値:** 0.625。
 
-**[8位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420314)**
+**[8位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420528)**
 
 * **アプローチ:** XGBoost + Transformer (+GRU/LSTM) のアンサンブル。外部データ活用。
 * **アーキテクチャ:** XGBoost (Question別)。Transformer (+GRU/LSTM, RIIIDコンペ風)。
@@ -181,7 +181,7 @@ enddate: 2023-06-29
     * **推論順序:** 元のシーケンス順序を保持するように工夫。異常インデックスセッションの再インデックス化。
     * **アンサンブル:** XGBoostとTransformerモデルをアンサンブル。
 
-**[9位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420312)**
+**[9位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420046)**
 
 * **アプローチ:** LightGBM + CatBoost の平均アンサンブル。Question別モデル。時間ベースの特徴量重視。
 * **アーキテクチャ:** LightGBM, CatBoost。
@@ -194,7 +194,7 @@ enddate: 2023-06-29
     * **効率化:** 推論にlleavesライブラリ使用。
     * **アンサンブル:** LightGBMとCatBoostの単純平均。
 
-**[10位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420295)**
+**[10位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420132)**
 
 * **アプローチ:** 複数GBDT (XGBoost, LightGBM) + NN (LSTM+Transformer) -> MLP/ロジスティック回帰でスタッキング -> 平均 + 閾値最適化。
 * **アーキテクチャ:** XGBoost, LightGBM (Level Group別)。NN (LSTM+Transformer)。MLP, Logistic Regression (スタッキング用)。

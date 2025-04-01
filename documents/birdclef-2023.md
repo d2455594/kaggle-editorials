@@ -73,7 +73,7 @@ BirdCLEF 2023では、音声データから鳥の種類を特定するタスク�
 
 **各解法の詳細**
 
-**[1位](https://www.kaggle.com/competitions/birdclef-2023/discussion/413324)**
+**[1位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412808)**
 
 * **アプローチ:** データ中心。Xeno-Canto APIのバグ修正によるデータ拡張。事前学習+ファインチューン。SEDモデルのアンサンブル。
 * **アーキテクチャ:** SEDモデル。Backbone: eca\_nfnet\_l0, convnext\_small\_fb\_in22k\_ft\_in1k\_384, convnextv2\_tiny\_fcmae\_ft\_in22k\_in1k\_384。
@@ -99,7 +99,7 @@ BirdCLEF 2023では、音声データから鳥の種類を特定するタスク�
     * **推論:** SEDは10秒入力→中央5秒で予測。TTA (2s shift)。推論高速化 (OpenVINO)。
     * **アンサンブル:** 7モデル (SEDx3, CNNx4) の重み付き平均 または ランク平均。
 
-**[3位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412724)**
+**[3位](https://www.kaggle.com/competitions/birdclef-2023/discussion/414102)**
 
 * **アプローチ:** 周波数帯Attentionを持つ修正SEDモデル。ドメインシフト対策としてのReverb Augmentation。
 * **アーキテクチャ:** SEDモデル (周波数帯Attention модификация)。Backbone: tf\_efficientnet\_b0\_ns, tf\_efficientnetv2\_s\_in21k。
@@ -112,7 +112,7 @@ BirdCLEF 2023では、音声データから鳥の種類を特定するタスク�
     * **推論:** 推論高速化 (TorchScript, 入力スペクトログラム事前計算)。推論時タイマーによるタイムアウト回避。
     * **アンサンブル:** 8モデル (EffNetB0 x5 + EffNetV2s x3) の単純平均。
 
-**[4位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412708)**
+**[4位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412753)**
 
 * **アプローチ:** 知識蒸留 (Google Bird Vocalization Classifierモデルから)。CNNモデル (2021年2位解法ベース)。
 * **アーキテクチャ:** CNNモデル (2021 2nd)。Backbone: eca\_nfnet\_l0 (4モデル全て)。入力形式違い (MelSpec, PCEN, MelSpec(別設定))。
@@ -125,7 +125,7 @@ BirdCLEF 2023では、音声データから鳥の種類を特定するタスク�
     * **推論:** 推論高速化 (TorchScript JIT)。
     * **アンサンブル:** 4モデル (eca\_nfnet\_l0だが入力設定違い) の単純平均。
 
-**[5位](https://www.kaggle.com/competitions/birdclef-2023/discussion/413084)**
+**[5位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412903)**
 
 * **アプローチ:** SEDモデル (2021年4位解法ベース)。2段階学習。疑似ラベル。
 * **アーキテクチャ:** SEDモデル。Backbone: tf\_efficientnet\_b1\_ns, tf\_efficientnet\_b2\_ns, tf\_efficientnet\_b3\_ns, tf\_efficientnetv2\_s\_in21k。
@@ -138,7 +138,7 @@ BirdCLEF 2023では、音声データから鳥の種類を特定するタスク�
     * **推論:** 推論高速化 (ONNX, ThreadPoolExecutor)。
     * **アンサンブル:** 15モデル (4 Backbone x (4 Fold + Full fit)) の平均。
 
-**[6位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412725)**
+**[6位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412708)**
 
 * **アプローチ:** BirdNET EmbeddingとCNNモデル (2021年2位解法ベース) の特徴量を結合。
 * **アーキテクチャ:** CNN (2021 2nd、Backbone: eca\_nfnet\_l1, seresnext26t\_32x4d) の出力 + BirdNET (v2.2) のEmbedding -> 線形層。
@@ -152,7 +152,7 @@ BirdCLEF 2023では、音声データから鳥の種類を特定するタスク�
     * **推論:** CNNは5秒、BirdNETは3秒入力。推論高速化 (ONNX, ThreadPoolExecutor)。
     * **アンサンブル:** 2モデル (eca\_nfnet\_l1, seresnext26t) の単純平均。
 
-**[7位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412730)**
+**[7位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412922)**
 
 * **アプローチ:** カスタムAugmentation `sumix` が中心。知識蒸留。Attention Head付きモデル。
 * **アーキテクチャ:** EfficientNet-B2 (torchvision), ReXNet150 (timm)。一部モデルにAttention Head追加。
@@ -165,7 +165,7 @@ BirdCLEF 2023では、音声データから鳥の種類を特定するタスク�
     * **推論:** 推論高速化 (OpenVINO)。
     * **アンサンブル:** 19モデル (EffNet-B2, ReXNet150, Attention Head有無、蒸留有無など) の平均。
 
-**[8位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412760)**
+**[8位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412871)**
 
 * **アプローチ:** マルチモーダルData Augmentation (SOD, レコメンデーション風Mixupなど)。段階的学習。
 * **アーキテクチャ:** CNNモデル (2021年2位解法ベース)。Backbone: eca\_nfnet\_l0。
@@ -182,7 +182,7 @@ BirdCLEF 2023では、音声データから鳥の種類を特定するタスク�
     * **推論:** 推論高速化 (ONNX, ThreadPoolExecutor)。
     * **アンサンブル:** 6モデル (eca\_nfnet\_l0、異なるMel設定、異なるEpoch) の平均。
 
-**[9位](https://www.kaggle.com/competitions/birdclef-2023/discussion/413083)**
+**[9位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412794)**
 
 * **アプローチ:** 複数ラウンド学習 (過去データ、蒸留、疑似ラベル)。CNNモデルのアンサンブル。
 * **アーキテクチャ:** EfficientNet-B0, eca\_nfnet\_l0, ConvNeXt-Tiny。一部にAttention Head。
@@ -195,7 +195,7 @@ BirdCLEF 2023では、音声データから鳥の種類を特定するタスク�
     * **推論:** 推論高速化 (OpenVINO、バッチロード最適化: 8ファイル同時ロード)。
     * **アンサンブル:** 7モデル (EffNet-B0 x2, eca\_nfnet\_l0 x2, ConvNeXt-Tiny x3) の重み付き平均 (Sigmoid後に平均)。
 
-**[10位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412709)**
+**[10位](https://www.kaggle.com/competitions/birdclef-2023/discussion/412713)**
 
 * **アプローチ:** SEDモデル。段階的スペクトログラムパラメータ変更学習。多様な小型Backbone利用。
 * **アーキテクチャ:** SEDモデル。Backbone: efficientnetv2\_m, eca\_nfnet\_l0, efficientnet\_v0, mnasnet\_100, spnasnet\_100, mobilenetv2\_100 (Seresnext50, Resnet34は性能不足で除外)。

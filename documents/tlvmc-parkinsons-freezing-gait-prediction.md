@@ -58,7 +58,7 @@ enddate: 2023-06-09
 
 **各解法の詳細**
 
-**[1位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/421672)**
+**[1位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/416026)**
 
 * **アプローチ:** tdcsfogとdefogで別モデル。Transformer EncoderとBiLSTMの組み合わせ。Vision Transformer風のパッチ化。ターゲットの解像度低減。
 * **アーキテクチャ:** FOGEncoder (Transformer Encoder Layer x5 + Positional Encoding) + BiLSTM x2 + Dense。
@@ -70,7 +70,7 @@ enddate: 2023-06-09
     * **Augmentation:** 学習時にPositional Encodingをランダムにシフト。
     * **推論:** 予測結果を元の解像度に復元 (`tf.tile`)。
 
-**[2位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/419970)**
+**[2位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/416057)**
 
 * **アプローチ:** tdcsfogとdefogで別モデル。両方ともGRUベース。短いシーケンスで学習し、長いシーケンスで推論。Defogでは疑似ラベル活用。
 * **アーキテクチャ:** GRU (多層)。
@@ -84,7 +84,7 @@ enddate: 2023-06-09
     * **アンサンブル:** 複数モデル（均一損失、重み付き損失）の結果を重み付き平均。
     * **モデル選択:** CVとPublicスコアの相関が後半で崩れたため、Publicスコアでモデル選択、CVでシーケンス長を決定。
 
-**[3位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/419940)**
+**[3位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/417717)**
 
 * **アプローチ:** tdcsfogとdefogに単一モデルを適用。Transformer + RNN。
 * **アーキテクチャ:** DeBERTa/Vision Transformer/Vision Transformer (Relative Position) Encoder + LSTM/GRU Decoder (通常2-4層、RNNは単層)。
@@ -93,7 +93,7 @@ enddate: 2023-06-09
     * **パッチ化:** パッチサイズ7-13、シーケンス長192-384パッチ。
     * **Augmentation:** ストレッチ、クロッピング、アブレーション、累積ガウスノイズなど、重度のAugmentation。
 
-**[4位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/419956)**
+**[4位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/416410)**
 
 * **アプローチ:** tdcsfogとdefogを統合し単一モデルで学習。Residual接続を持つ多層BiGRU。
 * **アーキテクチャ:** MultiResidualBiGRU (入力FC -> LayerNorm -> ResidualBiGRUブロック x N層 -> 出力FC)。ResidualBiGRUブロック内 (GRU -> FC -> LayerNorm -> ReLU -> FC -> LayerNorm -> ReLU -> Skip Connection)。
@@ -105,7 +105,7 @@ enddate: 2023-06-09
     * **入力:** ダウンサンプルしたシーケンス全体を一度に入力（バッチサイズ1）。
     * **GRU初期化:** 被験者メタデータ（年齢、性別など）をFCで射影し、GRUの初期隠れ状態として使用する試み（プロトタイプ）。1D Convでの特徴抽出も試行。
 
-**[5位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/421746)**
+**[5位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/418275)**
 
 * **アプローチ:** WaveNetブロックとGRUの組み合わせ。tdcsfog/defog共通モデル。事前学習の試み。ONNX変換によるCPU推論。
 * **アーキテクチャ:** Wave_Block (Dilated Conv) x3 + BiGRU (4層) + Dense。
@@ -118,7 +118,7 @@ enddate: 2023-06-09
     * **推論:** 長いウィンドウ (16000 or 20000) で分割して推論。ONNXに変換してCPUで高速化。複数モデル/重みを平均でアンサンブル。
     * **結果:** 事前学習モデルを含むアンサンブルがPublic LBでは良かったがPrivate LBでは低下。GPU推論では事前学習モデルが有効だった可能性。
 
-**[6位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/419887)**
+**[6位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/415992)**
 
 * **アプローチ:** スペクトログラム、ウェーブレット、1D Convベースの複数モデルのアンサンブル。tdcsfog/defog共通モデル。
 * **アーキテクチャ:**
@@ -135,7 +135,7 @@ enddate: 2023-06-09
     * **1D Conv:** Defog/tdcsfogの時間軸整列、Outlier被験者の重み低減、Snapshot Ensembling、`notype` データ活用 (max pooling予測)。
     * **アンサンブル:** 複数モデルタイプの結果を重み付き平均 (GP_minimizeで重み探索)。
 
-**[8位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/419899)**
+**[8位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/416021)**
 
 * **アプローチ:** ベースライン (Mayukh18氏) の改良。1D-ResNetを使用。5-Fold CVアンサンブル。tdcsfog/defog共通モデル。
 * **アーキテクチャ:** 1D-ResNet (3チャネル入力)。
@@ -145,7 +145,7 @@ enddate: 2023-06-09
     * **ウィンドウ:** 1000msのカット、未来予測50ms。(ベースラインから変更)。
     * **CV:** ベースラインのFold定義に基づき5つのモデルを学習し、アンサンブル。
 
-**[10位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/420049)**
+**[10位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/416513)**
 
 * **アプローチ:** Squeeze-and-Excitation付き1D U-Net。非常に長いコンテキストウィンドウ。tdcsfog/defog共通モデル。
 * **アーキテクチャ:** 1D U-Net (5 Encoder/Decoderペア) + Squeeze-and-Excitationブロック。

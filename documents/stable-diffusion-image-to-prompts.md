@@ -67,7 +67,7 @@ enddate: 2023-05-16
 
 **各解法の詳細**
 
-**[1位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/412936)**
+**[1位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/411237)**
 
 * **アプローチ:** 画像からプロンプト埋め込みを直接予測。大規模データ生成とモデルFine-tuning。
 * **アーキテクチャ:** ViT-Large, ConvNeXt-XXLarge, BLIP-2 Vision Model (LLM部除去)。追加FC層が効果的。
@@ -77,7 +77,7 @@ enddate: 2023-05-16
     * **学習:** 2段階学習 (LQデータ事前学習 -> HQデータFine-tuning)。LORA (下位層に適用)。入力解像度336x336。Augmentationなし(CLIP)/デフォルト(BLIP2)。
     * **アンサンブル:** 3モデルの埋め込みを重み付き平均。
 
-**[2位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/412819)**
+**[2位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/410606)**
 
 * **アプローチ:** 画像からプロンプト埋め込みを直接予測。CLIPモデルのFine-tuning。
 * **アーキテクチャ:** CLIP Vision Model (ConvNeXt-xxlarge, BLIP-2 Vision, EVA02-L, EVA02-e)。一部モデルにQ-Former追加。
@@ -88,7 +88,7 @@ enddate: 2023-05-16
     * **Q-Former:** Vision Modelの特徴量をトークン埋め込みに変換し、Sentence Transformerのトークン埋め込みと比較（ハンガリアン法でマッチング）。効果は限定的。
     * **アンサンブル:** 4モデル (+Q-Former付き) の重み付き平均 (Adamで重み最適化)。
 
-**[3位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/412887)**
+**[3位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/410686)**
 
 * **アプローチ:** 画像からプロンプト埋め込みを直接予測。CLIPモデルのFine-tuning。
 * **アーキテクチャ:** CLIP Vision Model (ViT-Base, ViT-Large, ViT-Huge, ConvNeXt-Large/XXLarge)。
@@ -99,7 +99,7 @@ enddate: 2023-05-16
     * **Augmentation:** 弱めのAugmentation (Crop, RandomErase, RandAug(一部除外))。同一プロンプト別シード生成 (10-20%)。Invisible Watermark Augmentation (効果小)。
     * **アンサンブル:** 複数モデル (ViT-L, ViT-H, ConvNext-L/XXLなど) の平均。
 
-**[4位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/412863)**
+**[4位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/410798)**
 
 * **アプローチ:** テキスト検索ベースとViTエンコーダ予測のアンサンブル。
 * **アーキテクチャ:**
@@ -115,7 +115,7 @@ enddate: 2023-05-16
     * **TTA (ViT):** 異なる画像正規化統計 (事前学習時 vs データセット計算値) で2回推論し平均。
     * **アンサンブル:** テキスト検索結果とViTエンコーダ予測 (4モデル平均) を重み付き平均 (CV最適/LB最適の2種提出)。
 
-**[5位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/412965)**
+**[5位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/410688)**
 
 * **アプローチ:** 画像からプロンプト埋め込みを直接予測。複数モデルのアンサンブル。
 * **アーキテクチャ:** eva02_large, convnext_xxlarge, convnext_large, vit_large。シンプルなBackbone + FC層(biasなし)。
@@ -126,7 +126,7 @@ enddate: 2023-05-16
     * **学習:** 2段階学習 (初期データセット -> 全データセットFine-tuning)。高解像度入力 (336, 384, 448)。軽量なAugmentation (RandomResizedCrop, ColorJitter)。
     * **アンサンブル:** 4モデル x 複数Fold (計18 Fold) の重み付き平均。重みはモデルごと、または次元ごと (384x4) で学習。
 
-**[6位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/412680)**
+**[6位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/410768)**
 
 * **アプローチ:** 画像からプロンプト埋め込みを直接予測。最新Backboneの活用。
 * **アーキテクチャ:** eva_large (336), convnext_large (384), swin_large (384)。
@@ -137,7 +137,7 @@ enddate: 2023-05-16
     * **学習:** バッチサイズ128, fp16。Horizontal Flipのみ有効。
     * **アンサンブル:** 14モデル (3 Backbone x 複数学習設定/データ) の平均。TTA (解像度変更: 460, 512)。
 
-**[7位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/412694)**
+**[7位](https://www.kaggle.com/competitions/stable-diffusion-image-to-prompts/discussion/410618)**
 
 * **アプローチ:** CLIP Vision Tower + キャプションモデルのアンサンブル。カスタムプロンプト生成。
 * **アーキテクチャ:** CLIP Vision Model (convnext_xxlarge, eva02_largeなど + 小型ViT/ConvNeXt)。キャプションモデル (GIT)。
