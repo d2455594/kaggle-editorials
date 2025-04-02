@@ -1,144 +1,169 @@
 ---
 tags:
   - Kaggle
-  - NLP
+  - Transformer
+  - DeBERTa
+  - 教育
+  - NER
 startdate: 2024-01-18
 enddate: 2024-04-24
 ---
-# PII Detection & Removal from Educational Data
-https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data
+# The Learning Agency Lab - PII Data Detection
+[https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data](https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data)
 
 **概要 (Overview)**
 
-* **目的:** このコンペティションの目的は、教育関連のテキストデータ（例: 学生のエッセイ、ディスカッションフォーラムの投稿など）に含まれる**個人を特定できる情報（Personally Identifiable Information - PII）**の箇所を自動的に検出し、識別するモデルを開発することです。「Removal（除去）」とありますが、主眼は高精度な「Detection（検出）」にあることが多いです（検出された箇所を後処理でマスクまたは削除するため）。
-* **背景:** 教育データを研究や分析目的で共有する際には、学生のプライバシーを保護するために慎重な匿名化が必要です。手作業でPIIを特定し編集する作業は時間がかかり、ミスも起こりやすいため、安全なデータ共有を促進するには自動化されたPII検出ツールが求められています。
-* **課題:** PII（名前、メールアドレス、住所、電話番号、ID番号など）は様々な形式や文脈で現れるため、その検出は容易ではありません。特に教育データ特有のPII（学生IDなど）も考慮する必要があります。効果的なツールには、PIIでない有用なテキストを誤って検出しないこと（高い適合率 - Precision）と、存在するPIIを可能な限り見逃さないこと（高い検出率 - Recall）の両方が求められますが、プライバシー保護の観点からは特に後者（Recall）が重視される傾向があります。タスクは、事前に定義されたPIIカテゴリ（例: `NAME_STUDENT`, `EMAIL`, `ID_NUM`など）に対応するテキストのスパンを特定する**固有表現抽出（Named Entity Recognition - NER）**として扱われます。これは通常、各トークン（単語やサブワード）にPIIタグ（例: B-NAME, I-NAME, O）を割り当てる**トークン分類問題**としてモデル化されます。
+* **目的:** このコンペティションの目的は、学生が作成したエッセイの中から、**個人を特定できる情報（Personally Identifiable Information, PII）** を自動的に検出し、その種類を分類する機械学習モデルを開発することです。
+* **背景:** 教育データの活用が進む中で、学生のプライバシー保護は極めて重要です。特に、エッセイのような自由記述形式のテキストには、意図せずPIIが含まれるリスクがあります。従来の手作業によるPIIの検出・匿名化はコストと時間がかかるため、AIによる高精度な自動検出技術が求められています。このコンペは、教育分野における安全なデータ活用を支援することを目的としています。
+* **課題:** 与えられたテキスト（エッセイ）をトークンレベルで分析し、PIIに該当するトークンとその範囲、およびPIIの種類（名前、メールアドレス、ID番号など7種類）を特定する**固有表現抽出（Named Entity Recognition, NER）タスク**です。自然言語の多様性や曖昧さ（一般的な単語と同じ文字列が名前として使われる場合など）に対応し、文脈を考慮してPIIを正確に識別する必要があります。また、学習データには存在しないか、ごく少数しか含まれないタイプのPII（例: 電話番号）も検出できる**汎化性能**が求められました。
 
 **データセットの形式 (Dataset Format)**
 
-提供される主なデータは、PII箇所がアノテーションされた教育関連のテキスト文書です。
+提供される主なデータは、エッセイテキストとそれに対応するPIIラベルです。
 
-1.  **トレーニングデータ (`train.json`, `train.jsonl` など):**
-    * 複数の文書が含まれます。ファイル形式は、文書テキストとアノテーション（トークン位置、PIIタイプ）を一緒に格納するのに適した JSON または JSON Lines (`.jsonl`) である可能性が高いです。
-    * 各文書には通常、以下が含まれます。
-        * `document`: 文書の識別子。
-        * `full_text`: 文書の全文テキスト。
-        * `tokens`: テキストをトークン化したリスト（例: 単語のリスト）。
-        * `trailing_whitespace`: 各トークンの後続空白の有無を示すリスト。
-        * `labels`: **ターゲット変数**。各トークンに対応するPIIラベルのリスト。通常、BIO（Beginning, Inside, Outside）タギングスキーマが用いられます（例: `['O', 'O', 'B-NAME_STUDENT', 'I-NAME_STUDENT', 'O', ...]`）。
-
-2.  **テストデータ (`test.json`, `test.jsonl` など):**
-    * トレーニングデータと同様の形式で `document`, `full_text`, `tokens`, `trailing_whitespace` を含みますが、`labels` は含まれません。
-    * 参加者は、このテストデータに含まれる各文書の各トークンに対してPIIラベルを予測します。
-
-3.  **`sample_submission.csv`**:
-    * 提出フォーマットのサンプル。通常、`document`, `token` (トークンのインデックス), `label` (予測されたPIIラベル) の列を持ちます。`row_id` を使う形式もあります。
+1.  **トレーニングデータ:**
+    * `train.json`: 約6,800件のエッセイデータが含まれるJSONファイル。各エッセイは以下のキーを持つ辞書のリストです。
+        * `document`: エッセイを一意に識別するID。
+        * `full_text`: エッセイの全文。
+        * `tokens`: テキストを空白や句読点などで分割したトークンのリスト。
+        * `trailing_whitespace`: 各トークンの後に続く空白文字（スペース、改行など）を示す真偽値のリスト。元のテキスト形式の復元に使用されます。
+        * `labels`: 各`tokens`に対応するPIIラベルのリスト。**BIO形式** (`B-TYPE`, `I-TYPE`, `O`) で記述されます。
+            * `O`: PIIではないトークン。
+            * `B-TYPE`: PIIタイプ`TYPE`の開始トークン。
+            * `I-TYPE`: PIIタイプ`TYPE`の継続トークン。
+            * PIIタイプ (`TYPE`) としては、`NAME_STUDENT`, `EMAIL`, `USERNAME`, `ID_NUM`, `PHONE_NUM`, `URL_PERSONAL`, `STREET_ADDRESS` の7種類があります。
+2.  **テストデータ:**
+    * `test.json`: トレーニングデータと同様の形式ですが、`labels`キーは含まれません。モデルはこのデータに対してPIIラベルを予測します。
+3.  **外部データ / 合成データ:**
+    * コンペ提供のトレーニングデータだけではサンプル数が限られており、特に稀なPIIタイプの学習が困難でした。そのため、多くの参加者は**大規模言語モデル（LLM）**（Mistral, Mixtral, Llama 3, Gemini, GPTなど）を用いて、**PIIを含む合成エッセイデータを大量に生成**し、トレーニングデータとして活用しました。
+    * Kaggle Datasets上で他の参加者が生成・共有した合成データセット（例: [@nbroad]([https://www.kaggle.com/nbroad)氏](https://www.google.com/search?q=https://www.kaggle.com/nbroad)%E6%B0%8F)、[@mpware]([https://www.kaggle.com/mpware)氏のデータセット]([https://www.google.com/search?q=https://www.kaggle.com/mpware)%E6%B0%8F%E3%81%AE%E3%83%87%E3%83%BC%E3%82%BF%E3%82%BB%E3%83%83%E3%83%88](https://www.google.com/search?q=https://www.kaggle.com/mpware)%E6%B0%8F%E3%81%AE%E3%83%87%E3%83%BC%E3%82%BF%E3%82%BB%E3%83%83%E3%83%88))）も広く利用されました。
+4.  **`sample_submission.csv`**:
+    * 提出フォーマットのサンプル。`document`, `token` (トークンのインデックス), `label` (予測されたBIO形式のラベル) の列を持ちます。テストデータの全トークンに対して予測ラベルを提出する必要があります。
 
 **評価指標 (Evaluation Metric)**
 
-* **指標:** **Macro-averaged F5 Score (マクロ平均F5スコア)**
+* **指標:** **エンティティレベル F5スコア (Entity-level Fbeta score with β=5)**
 * **計算方法:**
-    1.  モデルはテストデータの各トークンに対してPIIラベルを予測します。
-    2.  これらのトークンレベルの予測を集約して、完全なPIIエンティティのスパン（例: 連続する `B-NAME_STUDENT`, `I-NAME_STUDENT` トークン）を特定します。
-    3.  予測されたエンティティスパンを、正解のエンティティスパンと比較します（スパンの境界とエンティティタイプの両方が一致する必要がある）。
-    4.  各PIIエンティティタイプ（`NAME_STUDENT`, `EMAIL` など）ごとに、適合率（Precision）、検出率（Recall）、および F5 スコアを計算します。
-        * F5スコアは、適合率よりも**検出率（Recall）を5倍重視**する Fベータスコアの一種です: F5 = (1 + 5²) * (Precision * Recall) / (5² * Precision + Recall) = 26 * (Precision * Recall) / (25 * Precision + Recall)
-    5.  最後に、全てのPIIタイプについて計算されたF5スコアを単純平均（マクロ平均）したものが、最終的な評価スコアとなります。
-* **意味:** F5スコアは、PII検出タスクにおいて「見逃しを極力減らす」という目的を強く反映した指標です。PIIでないものを誤って検出してしまう（適合率の低下）ことよりも、PIIを見逃してしまう（検出率の低下）ことに対して、はるかに大きなペナルティを与えます。マクロ平均は、データセット内での出現頻度に関わらず、各PIIタイプを平等に評価します。F5スコアが**高い**ほど、検出率を重視した目標において、モデルの性能が良いと評価されます。
-
-要約すると、このコンペティションは、教育データ内のPIIを検出する固有表現抽出（NER）タスクであり、特に見逃しを最小限に抑えることが重視されます。データはPIIがアノテーションされた文書（JSON形式が主）で、性能は各PIIタイプでRecallを強く重視して計算されたF5スコアをマクロ平均した値（高いほど良い）によって評価されます。
+    1.  モデルの予測結果（トークンごとのBIOラベル）から、連続する`B-TYPE`と`I-TYPE`のトークン列をPIIエンティティとして抽出します。
+    2.  予測されたPIIエンティティが、真のPIIエンティティと**完全に一致**する場合（ラベルタイプとトークンの範囲の両方が一致）にTrue Positive (TP) とカウントします。
+    3.  Precision (適合率 = TP / (TP + FP)) と Recall (再現率 = TP / (TP + FN)) を計算します。FPは誤ってPIIと予測されたエンティティ、FNは見逃されたPIIエンティティです。
+    4.  β=5としてFbetaスコアを計算します: F5 = (1 + 5²) * (Precision * Recall) / ((5² * Precision) + Recall) = 26 * (Precision * Recall) / (25 * Precision + Recall)
+* **意味:** F5スコアは、Recall（再現率）をPrecision（適合率）よりも**5倍重視**する指標です。これは、PII検出タスクにおいて、**偽陽性（誤検出）を多少許容してでも、偽陰性（見逃し）を可能な限り減らすこと**が重要であるというコンペの目的に合致しています。個人情報保護の観点から、見逃しのリスクを低く抑えることが極めて重視されます。スコアは**高い**ほど良い評価となります。
 
 ---
 
-**全体的な傾向:**
+**全体的な傾向**
 
-上位解法は、Transformerベースの言語モデル（特にDeBERTa-v3 large）のファインチューニングが中心でした。外部データ（特にAI生成データ）の活用、カスタムヘッドの設計、データ拡張、そしてルールベースのポストプロセッシングが重要なテクニックとして用いられました。また、トークナイザの特性を理解し、それに対応した処理を行うこともスコア向上に貢献しました。
+このコンペティションは、テキストからの固有表現抽出（NER）タスクであり、特にPIIの見逃しを厳しく評価するF5スコアが指標でした。上位解法の多くは、**TransformerベースのEncoderモデル**、中でも**DeBERTa-v3-large**を主軸としていました。
 
-**各解法の詳細:**
+最も重要な成功要因の一つは、**外部データおよび合成データの活用**でした。コンペ提供のデータだけでは不足しており、LLMを用いて生成された大量の合成データセット（数千〜数万サンプル）を学習に組み込むことが一般的でした。これにより、特に学習データ中に少ないPIIタイプの検出能力やモデルの汎化性能が向上しました。
 
-**1位**
+モデルアーキテクチャとしては、DeBERTa-v3-largeがデファクトスタンダードでしたが、多様性を確保するために**BiLSTM/GRUレイヤーの追加**や**Multi-Sample Dropout**などの工夫を施したモデルもアンサンブルに用いられました。**知識蒸留**も有効な手法として利用されました。入力テキストが長いため、**Max Length**を大きく設定し（1024〜4096）、**ストライド（オーバーラップ）**を用いて文書全体を処理する手法が一般的でした。
 
-- **アプローチ:** 多様で大規模なAI生成データセットを活用したDeBERTaアンサンブル。カスタムモデル（Multi-Sample Dropout、Bilstmレイヤー）、知識蒸留、データ拡張、そしてルールベースのポストプロセッシング。
-- **アーキテクチャ:** DeBERTa-v3 large/base、カスタムヘッド（Multi-Sample Dropout、Bilstmレイヤー）。
-- **アルゴリズム:** ロス関数（CrossEntropyLoss、KLDivLoss）、オプティマイザ（AdamW）。
-- **テクニック:**
-    - **データ:** 外部データセット（nbroad、mpware、自作）、データ拡張（名前の入れ替え）。
-    - **モデリング:** DeBERTaのバリエーション、知識蒸留（複数の教師モデル）、重み付き投票アンサンブル。
-    - **ポストプロセッシング:** 閾値調整、`NAME_STUDENT` のフィルタリング（title-cased、数字/アンダースコアなし）、同一文書内でのラベル伝播、`PHONE_NUM` を `ID_NUM` に変換、`STREET_ADDRESS` の修正、`USERNAME` の修正、短すぎる/長すぎる予測の除去、`URL_PERSONAL`、`EMAIL` のフィルタリング、正規表現。
+学習においては、クラス不均衡（特に'O'ラベルが多い）に対処するため、PIIラベルの**損失の重みを上げる**、あるいは'O'ラベルの重みを下げる**重み付き損失関数**（CrossEntropyLossやFocal Loss）が広く使われました。
 
-**2位**
+評価指標F5スコアを最大化するためには、モデルの予測結果に対する**後処理 (Post-processing)** が極めて重要でした。単純な確率閾値だけでなく、PIIタイプごとに**異なる閾値**を設定したり、**ルールベース**での修正（例: NAME_STUDENTが大文字で始まらない場合は除去、STREET_ADDRESS内の改行補完、ID_NUMの桁数チェックなど）を適用したり、同一文書内でのラベル整合性を取る（同じ文字列は同じラベルにする）などの処理が行われました。さらに、モデルが見逃した特定のパターン（URL, EMAILなど）を**正規表現**で補完することも有効でした。
 
-- **アプローチ:** DeBERTa-v3-largeモデルのアンサンブルと、pre/post処理。Kaggle-OnlyデータとPersuadeデータの特性を考慮した2段階学習。
-- **アーキテクチャ:** DeBERTa-v3-large。カスタム分類ヘッド。
-- **アルゴリズム:** BCEWithLogitsLoss（順序回帰）。
-- **テクニック:**
-    - **データ:** Kaggleデータ、nbroadの生成データセット（低重み）。
-    - **前処理:** サブストリング（単語、句読点、空白）に基づくトークナイズ、B-/I-プレフィックスの除去、空白の無視。
-    - **学習:** 2段階学習（Kaggle-Persuadeで事前学習後、Kaggle-Onlyでファインチューニング）、MLM事前学習（10エポック）。
-    - **後処理:** `NAME_STUDENT` のフィルタリング（title-cased、長さ1より大きい）、同一文書内でのラベル伝播、`\n` を `STREET_ADDRESS` として予測。
-    - **アンサンブル:** 6つのDeBERTa-v3-largeモデルの投票。
+最終的な提出は、異なる設定やアーキテクチャで学習された**複数のモデルの予測をアンサンブル**（加重平均や多数決）し、その結果に後処理を適用する形が一般的でした。アンサンブルの重みや後処理の閾値は、交差検証（CV）の結果に基づいてOptunaなどで最適化されました。
 
-**3位**
+**各解法の詳細**
 
-- **アプローチ:** MLM事前学習済みDeBERTaと、データセットの特性に基づいた2段階ファインチューニング。ソフトラベリング、敵対的サンプリング（データセット改善）。
-- **アーキテクチャ:** DeBERTa-v3-base、DeBERTa-v3-large。
-- **アルゴリズム:** BCE損失。
-- **テクニック:**
-    - **データ:** mpwareデータセットで事前学習、競技データとnbroadデータセットでファインチューニング。
-    - **データ前処理:** 改行文字を特殊トークンに変換。
-    - **CV戦略:** Prompt name/scoreに基づいたMultilabelstratifiedkfold。Data AとData Bを別々に分割。
-    - **モデルと学習:** MLM事前学習、レイヤー凍結（9層または6層）。回帰とBCE損失を使用。2段階学習でソフトラベリングを活用。
-    - **ポストプロセッシング:** `O` ラベルの閾値処理、OOF予測に基づいた偽陽性フィルタリング（短すぎる予測、教師名、Mr/Mrs/Drなど）、同一文書内でのラベル伝播、`PHONE_NUM` を `ID_NUM` に変換、URL/EMAILの除去、正規表現。
+**[1位](https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data/discussion/497374)**
 
-**4位**
+* **アプローチ:** DeBERTa-v3-largeの多様なバリアント（Multi-Sample Dropout, BiLSTM Head, Knowledge Distillation）を含むアンサンブル。強力な後処理。
+* **アーキテクチャ:** DeBERTa-v3-largeベース。Multi-Sample Dropout追加版、BiLSTMヘッド追加版。
+* **アルゴリズム:** Token Classification。CrossEntropyLoss (Oラベルの重み=0.05)。Knowledge Distillation (KLDivLoss)。AdamW?
+* **テクニック:**
+    * **データ:** nbroad氏、mpware氏の外部データ、および自作データ(2k)を使用。
+    * **学習:** Max Length 1600-2048。3-4 epochs。LR 1e-5。Knowledge Distillationで性能向上 (+0.005-0.01)。
+    * **後処理:** クラス別閾値。ルールベース修正（大文字でない名前除去、PHONE_NUM→ID_NUM変換、STREET_ADDRESSの改行補完、USERNAME連結、ID/URL/EMAILの長さ/フォーマットチェック）。同一文書内でのNAME_STUDENT統一。Regexによる補完。
+    * **アンサンブル:** 7グループ10モデルの重み付きVoting Ensemble（重みと閾値はOptunaで最適化）。
 
-- **アプローチ:** Llama3 🦙 70Bをベースモデルとしたアンサンブル。データソースのタグ付け、データソース分類ヘッドの追加、非Persuadeデータのスコアに基づく早期停止。動的マイクロバッチ照合、高速なDeBERTa実装。
-- **アーキテクチャ:** DeBERTa V3 Large、Qwen2-1.5B-Instruct、Llama3 70B。
-- **アルゴリズム:** Focal Loss。
-- **テクニック:**
-    - **データ:** 公式データ、33kデータ、nbroadデータセット。LLaMA3 70Bで生成したデータ。
-    - **データソースの区別:** 入力にデータソースのタグを追加。データソース分類ヘッドを追加。
-    - **早期停止:** 非Persuadeデータのスコアに基づいて早期停止。
-    - **データ生成:** ペルソナ、ツール、PII情報を用いたLLMによるデータ生成。偽陽性サンプルの言い換え。
-    - **後処理:** STUDENT_NAMEのフィルタリング（教師名、フィクションキャラクター）、正規表現による名前/IDのフィルタリング、特定のinstructor名の除去、XGBoostによる検証。
-    - **その他:** Dynamic Micro Batch Collation、高速なDeBERTa実装。
+**[2位](https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data/discussion/497352)**
 
-**5位**
+* **アプローチ:** DeBERTa-v3-largeモデルのシンプルなアンサンブル（バギング）。トークナイザの差を吸収する前処理と、ルールベースの後処理。
+* **アーキテクチャ:** DeBERTa-v3-large。
+* **アルゴリズム:** Token Classification (B-/I-プレフィックス除去、7クラス分類)。CrossEntropyLoss? AdamW + Cosine Annealing LR。
+* **テクニック:**
+    * **前処理:** HuggingFaceの `is_split_into_words=True` オプションで、提供されたトークンリストを直接利用。空白トークンは無視（デフォルトで'O'予測）。B-/I-プレフィックスを除去。
+    * **データ:** nbroad氏の外部データを0.5の重みで混合。
+    * **学習:** Max Length 512, 1024, 2048。Stride 32。LR 2e-5。4 epochs。
+    * **後処理:**
+        * NAME_STUDENT統一: あるトークンがNAME_STUDENTと予測されたら、同一文書内の同じ文字列トークンもNAME_STUDENTにする。長さ1やTitle Caseでない場合は除去。
+        * STREET_ADDRESS改行補完: "\n" トークンをSTREET_ADDRESSに変更。
+        * 閾値調整: 'O'クラスの確率をスケールダウン（係数0.02-0.03）してからargmax。
+    * **アンサンブル:** 6つのモデル（異なるMax Length, Strideで学習）の予測確率を平均。
 
-- **アプローチ:** 170万件のトレーニング例とドメイン適応。教師モデル（DeBERTa、Mamba）でテストデータをラベル付けし、その予測を模倣するように生徒モデル（DeBERTa）を訓練する。
-- **アーキテクチャ:** DeBERTa-v3-large、Mamba-790m (教師モデル)、DeBERTa-v3-large (生徒モデル)。
-- **アルゴリズム:** SCS損失（教師モデル）、MSE/MAE損失（生徒モデル）。カットミックス。
-- **テクニック:**
-    - **データ:** PERSUADE essays、Uncopyrighted Pile Completions、SlimPajama Completions、Tricky Crawl。疑似ラベリング（ソフトラベル）。
-    - **データ拡張:** バグのあるスペルチェック、ブラックリスト文字の削除、タイポの追加、ランダムな大文字化、文の入れ替え。カットミックス（p=1.0）。
-    - **ドメイン適応:** 短いコンテキストの生徒モデルによる教師アンサンブルの予測の模倣。
-    - **アンサンブル:** 異なるバックボーンのアンサンブル、TTAライクなアンサンブル。
+**[3位](https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data/discussion/497482)**
 
-**6位**
+* **アプローチ:** 単一のDeBERTa-v3-largeバックボーンを複数シードで学習しアンサンブル。2段階学習と後処理。
+* **アーキテクチャ:** DeBERTa-v3-large。
+* **アルゴリズム:** Token Classification。CrossEntropyLoss? AdamW?
+* **テクニック:**
+    * **データ:** mpware氏のデータセットで事前学習後、コンペデータ+nbroad氏データセットでファインチューニング。
+    * **学習:** LR 1e-5。Batch Size 2, Grad Accum 2。Warmup 0.1。2 epochs。Tokenizerに改行・タブ文字などを追加。
+    * **検証:** Stratified 5 folds (PII有無で層化)。訓練データに少ないPIIクラスの性能評価用に別途生成/外部データを使用。
+    * **後処理:** 'O'ラベル閾値調整。ルールベースFP除去（短い予測、敬称、一般的講師名など）。同一文書内でのNAME_STUDENTラベル修正。
 
-- **アプローチ:** 重み付き平均アンサンブル（DeBERTaモデル）。DeBERTaトークナイザからSpacyトークナイザへのマッピング。Mistral-v02で作成した追加データセットの利用。エラー分析に基づいた後処理。
-- **アーキテクチャ:** DeBERTa-v3-large、DeBERTa-v3-base、カスタムヘッド（トークンマッピング機能付き）。
-- **アルゴリズム:** Focal Loss。
-- **テクニック:**
-    - **カスタムヘッド:** DeBERTaトークンからSpacyトークンへの予測確率のマッピング。
-    - **データ:** 競技データ、公開データセット、Mistral-7B-Instruct-v0.2で生成したデータセット。
-    - **損失:** DeBERTaトークン損失、文字損失、Spacyトークン損失、開始/終了位置損失。
-    - **後処理:** 空白文字のラベル修正、`\n` の処理、同一エッセイ内の `NAME_STUDENT` の統一。
+**[4位](https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data/discussion/497367)**
 
-**7位**
+* **アプローチ:** DeBERTa-v3-largeモデルのアンサンブル。Llama 3 70B Instructによる高品質なデータ生成が鍵。テキスト前処理とBiLSTM/GRUヘッドの追加。
+* **アーキテクチャ:** DeBERTa-v3-large + BiLSTM/GRUヘッド。
+* **アルゴリズム:** Token Classification。Focal Loss。AdamW + Cosine Scheduler。
+* **テクニック:**
+    * **データ生成:** **Llama 3 70B Instruct** を使用し、高品質な合成データを生成（これが単体モデル性能を大幅に向上）。nbroad氏のデータも使用。False Positiveとなった教師名などを含むサンプルをパラフレーズして追加。
+    * **テキスト前処理:** 空白文字を特殊トークン `[SPACE]` に置換。Unicode正規化 (unidecode)。
+    * **学習:** Max Length 1280。3 epochs。LR 1e-5 or 2e-5。PyTorchで実装 (HF Trainer不使用)。
+    * **推論:** Max Length 4000, Stride 1024で推論するのが最適だった（訓練時より長い）。
+    * **CV戦略:** Stratified 5 fold (PII有無で層化)。
+    * **後処理:** 数字を含むNAME_STUDENT除去、非難読化された講師名除去など、最小限のルールを適用。他の複雑な後処理は効果なしと判断。
+    * **アンサンブル:** 10個のDeBERTa-v3-largeモデル (5 Fold x 2) をアンサンブル。
 
-- **アプローチ:** 14モデルのアンサンブルとポストプロセッシング。公開されている事前学習済みモデルの利用。
-- **アーキテクチャ:** DeBERTa-v3-large（様々な事前学習済みモデル）。
-- **アルゴリズム:** 不明（write-upに詳細な記述なし）。
-- **テクニック:**
-    - **アンサンブル:** 複数の公開モデルの重み付き投票。短いテキストにはより多くのモデルを使用。
-    - **ポストプロセッシング:** ラベルごとの異なる閾値、`NAME_STUDENT` のフィルタリング（title-cased、数字/アンダースコアなし）、`B-` トークンの修正（`I-` が続かない場合）、アドレスのラベル追加（改行など考慮）。
+**[5位](https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data/discussion/497306)**
 
-**9位**
+* **アプローチ:** 3人のメンバーがそれぞれ異なるMax Length (128, 512, 1536) でDeBERTa-v3-largeモデルを学習し、それらをVotingアンサンブル。
+* **アーキテクチャ:** DeBERTa-v3-large。一部LSTMヘッド追加。一部モデルはEmbedding/初期レイヤーを凍結。
+* **アルゴリズム:** Token Classification。CrossEntropyLoss (Oラベルの重み0.1 or PIIラベルの重みx5)。AdamW + Cosine Scheduler。
+* **テクニック:**
+    * **データ:** nbroad氏、mpware氏、pjmathematician氏、valentinwerner氏の外部/合成データを活用。データセットの組み合わせを変えて学習。
+    * **学習:** メンバーごとに異なるMax Length (128, 512, 1536) で学習し、多様性を確保。Positional Feature（絶対位置、相対位置）を追加（ryotakパート）。EMA使用（ryotakパート）。
+    * **推論:** 長いMax Length (4096) での推論が有効（minfukaパート）。AMPで推論高速化。
+    * **後処理:** 各メンバーが個別に行った後、アンサンブル。ルールベースFP除去（空白、プレフィックス整合性、Regex、大文字でない名前、冠詞/前置詞に続く名前など）。
+    * **アンサンブル:** 各メンバー内でアンサンブル後、最終的にメンバー間の予測をSimple Voting。
 
-- **アプローチ:** DeBERTa v3 largeのアンサンブル（レイヤードロップアウト、マルチサンプルドロップアウト、LoRA）。Mixtral 8x7bで作成した改善版データセットの利用。手動で修正したtrain.json。
-- **アーキテクチャ:** DeBERTa v3 large、DeBERTa v2 xlarge (LoRA)。
-- **テクニック:**
-    - **データ:** Mixtral 8x7bで作成したデータセット（引用、チームメイト名、URLなど追加）、手動で修正したtrain.json。
-    - **学習:** 4フォールドで設定を見つけ、全データで学習。エポックごとに名前を入れ替えるコールバック。
-    - **ポストプロセッシング:** `NAME_STUDENT` のフィルタリング（title-cased、英字とドットのみ）、dr/mr/missなどの除去、同一文書内の名前の統一、`I-` の修正、URL/EMAILの除去、電話番号の正規表現。
+**[6位](https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data/discussion/498304)**
+
+* **アプローチ:** DeBERTa-v3-largeとbaseモデルのアンサンブル。トークナイザ間のマッピングを行うカスタムヘッド。Mistralによるデータ生成。
+* **アーキテクチャ:** DeBERTa-v3-large, DeBERTa-v3-base。カスタムヘッド（DeBERTaトークン予測→文字単位予測→Spacyトークン予測）。
+* **アルゴリズム:** Token Classification (8クラス、BIOプレフィックスなし)。Focal Loss (Oラベル重み0.1)。カスタムヘッドからのAuxiliary Loss、開始/終了トークン予測のBCE Lossも追加。
+* **テクニック:**
+    * **データ生成:** Mistral-7B-Instruct-v0.2をファインチューニングし、ランダムなツール名やFaker生成PIIを組み合わせて合成データを生成。公開共有データセットも併用。
+    * **カスタムヘッド:** DeBERTaトークナイザと提出形式のSpacyトークナイザの差異を吸収するため、文字レベルの予測を経由してマッピング。`scatter_reduce_` (mean) を使用。
+    * **学習:** モデルごとに異なるデータセット組み合わせ、Loss構成で学習。Max Length 4600。
+    * **推論:** Max Length 6300。
+    * **後処理:** 空白文字を'O'に設定。STREET_ADDRESS内の改行補完。同一文書内NAME_STUDENT統一。
+    * **アンサンブル:** DeBERTa-v3-large (2種) と DeBERTa-v3-baseの計12モデル（4 Fold x 3）を重み付き平均。
+
+**[7位](https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data/discussion/497310)**
+
+* **アプローチ:** 多数（14個）の公開モデルのアンサンブル。時間制限に基づき、短いテキストには多くのモデルを、長いテキストには少数のモデルを適用する推論戦略。
+* **アーキテクチャ:** 公開されているDeBERTaモデル（複数）。
+* **アルゴリズム:** Token Classification。
+* **テクニック:**
+    * **モデル:** 複数の公開データセットから学習済みモデルを利用。
+    * **推論戦略:** 推論時間（約8.5時間）を考慮。最初の3時間は全モデルで全データ予測。残りの5.5時間は、短いテキスト（2/3）に対して残りのモデルで追加予測。テキスト長に応じて適用モデル数を変える。
+    * **閾値調整:** ラベルタイプごとに異なる閾値（NAME_STUDENTは低め、他は高め）。
+    * **後処理:** NAME_STUDENTは大文字開始+小文字のみ。単一B-トークンで短すぎるもの、フォーマット不正（電話、メール、ID）を除去。STREET_ADDRESS内の改行補完。
+    * **アンサンブル:** モデル予測のアンサンブル（詳細は不明、VotingかAverageか）。
+
+**[9位](https://www.kaggle.com/competitions/pii-detection-removal-from-educational-data/discussion/497177)**
+
+* **アプローチ:** DeBERTa-v3-large, DeBERTa-v2-xlargeのアンサンブル。Mixtralによる改良版データセット。文字レベルでのトークナイザ差分吸収。
+* **アーキテクチャ:** DeBERTa-v3-large (通常版、LayerDrop+MultiSample Dropout版)、DeBERTa-v2-xlarge (LoRA)。
+* **アルゴリズム:** Token Classification。
+* **テクニック:**
+    * **データ:** Mixtral 8x7Bで自作した改良版データセットを使用（有名人の引用、チームメイト名、個人サイトURLなどのパターンを追加）。コンペデータのラベルエラー約30箇所を修正。
+    * **学習:** Max Length 512, Stride 128。4 Fold学習後に全データ学習。毎エポックで名前をランダムに置換するコールバックを使用。
+    * **トークナイザ対応:** DeBERTa v2とv3のトークナイザ差異に対応するため、文字レベルにマッピングしてから最終的なSpacyトークンレベルの予測を得る（最大値プーリング）。
+    * **後処理:** 名前はTitle Caseで英字/ピリオドのみ。敬称除去。同一文書内での名前ラベル統一。B-/I-プレフィックス整合性チェック。特定URL（Coursera, Wikipedia, .edu）除去。電話番号→ID番号変換ルール。電話番号のRegexチェック。
+    * **アンサンブル:** 上記3モデルのアンサンブル。

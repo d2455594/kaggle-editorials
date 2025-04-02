@@ -1,191 +1,189 @@
 ---
 tags:
   - Kaggle
-startdate: 2023-03-16 
+  - UNet
+startdate: 2023-03-16
 enddate: 2023-06-15
 ---
 # Vesuvius Challenge - Ink Detection
-https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection
+[https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection)
 
 **概要 (Overview)**
 
-- **目的:** このコンペティションの目的は、紀元後79年のヴェスヴィオ火山噴火によって炭化した古代ヘルクラネウムの巻物から得られた**3D X線CTスキャンデータ**を用いて、**巻物内部に書かれたインクを検出する**機械学習モデルを開発することです。
-- **背景:** ヘルクラネウムの巻物は、物理的に開くと崩れてしまうほど脆いため、未開封のままです。これらには失われた古代のテキストが含まれている可能性があり、その解読は歴史的に非常に重要です。高解像度のX線CTスキャン技術により巻物の内部構造をデジタルデータ化できますが、パピルスとインクの密度差が非常に小さいため、インクの識別は極めて困難です。この「ヴェスヴィオ・チャレンジ」は、AI技術を活用してこの難問に挑む、より大きな取り組みの一部です。
-- **課題:** CTスキャンデータから、パピルス繊維と区別がつきにくい**微かなインクの痕跡**を正確に識別することです。データは大規模な3次元ボリュームであり、巻物の損傷や変形も考慮する必要があります。これは、本質的には3Dデータに対する**セグメンテーション（領域分割）タスク**であり、インクが存在するピクセル（ボクセル）を特定することが求められます。
+* **目的:** このコンペティションの目的は、紀元後79年のヴェスヴィオ火山噴火によって炭化した古代ヘルクラネウムの巻物から得られた**3D X線CTスキャンデータ**を用いて、**巻物内部に書かれたインクを検出する**機械学習モデルを開発することです。
+* **背景:** ヘルクラネウムの巻物は、物理的に開くと崩れてしまうほど脆いため、未開封のままです。これらには失われた古代のテキストが含まれている可能性があり、その解読は歴史的に非常に重要です。高解像度のX線CTスキャン技術により巻物の内部構造をデジタルデータ化できますが、パピルスとインクの密度差が非常に小さいため、インクの識別は極めて困難です。この「ヴェスヴィオ・チャレンジ」は、AI技術を活用してこの難問に挑む、より大きな取り組みの一部です。
+* **課題:** CTスキャンデータから、パピルス繊維と区別がつきにくい**微かなインクの痕跡**を正確に識別することです。データは大規模な3次元ボリュームであり、巻物の損傷や変形も考慮する必要があります。これは、本質的には3Dデータに対する**セグメンテーション（領域分割）タスク**であり、インクが存在するピクセル（ボクセル）を特定することが求められます。
 
 **データセットの形式 (Dataset Format)**
 
 提供される主なデータは、巻物のCTスキャンデータの一部（フラグメント）とその中のインク位置を示すラベル（マスク）です。
 
-1. **トレーニングデータ:**
-    
-    - 複数の巻物フラグメントから構成されます。
-    - 各フラグメントは、**3Dボリュームデータ**を表す一連の2D画像（通常はTIFF形式）のスライスとして提供されます。これらはCTスキャンの連続した断面画像です。
-    - `train/{fragment_id}/surface_volume/` : 各フラグメントのCTスキャンデータ（入力画像）。数十枚のTIFFファイルが含まれます。
-    - `train/{fragment_id}/inklabels.png`: **ターゲット変数**となる、対応するインクの正解ラベルマスク（2値画像）。インクがあるピクセルが1（または255）、ないピクセルが0で示されます。
-    - `train/{fragment_id}/mask.png`: 巻物領域を示すマスク。この領域内のみが評価対象となります。
-2. **テストデータ:**
-    
-    - トレーニングデータと同様の形式で、複数のフラグメントのCTスキャンデータ（TIFF画像のスライス）が提供されます (`test/{fragment_id}/surface_volume/`)。
-    - インクの正解ラベル (`inklabels.png`) は提供されません。
-    - 参加者は、このテストデータ内の指定された領域 (`mask.png`) に対してインクの位置を予測します。
-3. **`sample_submission.csv`**:
-    
-    - 提出フォーマットのサンプル。通常、`Id`（フラグメントIDとピクセル位置を示す識別子）と `Predicted`（予測結果、通常はランレングスエンコーディング形式）の列を持ちます。
+1.  **トレーニングデータ:**
+    * 複数の巻物フラグメントから構成されます (`fragment_1`, `fragment_2`, `fragment_3`)。
+    * 各フラグメントは、**3Dボリュームデータ**を表す一連の2D画像（通常はTIFF形式、65枚）のスライスとして提供されます。これらはCTスキャンの連続した断面画像です。
+    * `train/{fragment_id}/surface_volume/`: 各フラグメントのCTスキャンデータ（入力画像）。フォルダ内に数十枚のTIFFファイルが含まれます。
+    * `train/{fragment_id}/inklabels.png`: **ターゲット変数**となる、対応するインクの正解ラベルマスク（2値画像）。インクがあるピクセルが1、ないピクセルが0で示されます。
+    * `train/{fragment_id}/mask.png`: 巻物領域を示すマスク。この領域内のみが評価対象となります。ピクセル値が255の部分が有効領域です。
+    * `train/{fragment_id}/ir.png`: 赤外線写真。補助的な情報として利用可能。
+2.  **テストデータ:**
+    * トレーニングデータと同様の形式で、複数のフラグメントのCTスキャンデータ（TIFF画像のスライス）が提供されます (`test/{fragment_id}/surface_volume/`)。
+    * インクの正解ラベル (`inklabels.png`) は提供されません。
+    * 参加者は、このテストデータ内の指定された領域 (`mask.png`) に対してインクの位置を予測します。
+3.  **`sample_submission.csv`**:
+    * 提出フォーマットのサンプル。`Id`（フラグメントIDとピクセル位置を示す識別子）と `Predicted`（予測結果、ランレングスエンコーディング形式）の列を持ちます。
 
 **評価指標 (Evaluation Metric)**
 
-- **指標:** **F0.5スコア**
-- **計算方法:** Fbetaスコアは、適合率（Precision）と再現率（Recall）の加重調和平均です。F0.5スコアは、β=0.5として計算され、適合率を再現率よりも重視します。
-    - Precision = TP / (TP + FP)
-    - Recall = TP / (TP + FN)
-    - F0.5 = (1 + 0.5²) * (Precision * Recall) / ((0.5² * Precision) + Recall) （TP: 真陽性、FP: 偽陽性、FN: 偽陰性）
-- **意味:** モデルが予測したインク領域と実際のインク領域の一致度を測ります。F0.5スコアは、**偽陽性（インクでない箇所をインクと予測してしまうこと）を低く抑えること**（高い適合率）を特に重視する指標です。巻物の解読において、誤ってインクと判定された箇所が多いとテキストの解釈を誤らせる可能性があるため、適合率の高さがより重要視されていると考えられます。スコアは**高い**ほど、より正確に（特に偽陽性を少なく）インクを検出できていると評価されます。
-
-要約すると、このコンペティションは、X線CTスキャンされた古代巻物の3Dデータから微かなインクを検出するセグメンテーションタスクです。データはCT画像スライスと正解マスクで構成され、性能は適合率を重視したF0.5スコア（高いほど良い）によって評価されます。
+* **指標:** **F0.5スコア**
+* **計算方法:** Fbetaスコアは、適合率（Precision）と再現率（Recall）の加重調和平均です。F0.5スコアは、β=0.5として計算され、適合率を再現率よりも重視します。
+    * Precision = TP / (TP + FP)
+    * Recall = TP / (TP + FN)
+    * F0.5 = (1 + 0.5²) * (Precision * Recall) / ((0.5² * Precision) + Recall) = 1.25 * (Precision * Recall) / (0.25 * Precision + Recall)
+    （TP: 真陽性、FP: 偽陽性、FN: 偽陰性）
+* **意味:** モデルが予測したインク領域と実際のインク領域の一致度を測ります。F0.5スコアは、**偽陽性（インクでない箇所をインクと予測してしまうこと）を低く抑えること**（高い適合率）を特に重視する指標です。巻物の解読において、誤ってインクと判定された箇所が多いとテキストの解釈を誤らせる可能性があるため、適合率の高さがより重要視されていると考えられます。スコアは**高い**ほど、より正確に（特に偽陽性を少なく）インクを検出できていると評価されます。
 
 ---
 
 **全体的な傾向**
 
-ヴェスヴィオ火山の噴火で炭化した巻物からインク（文字）を検出するこのセグメンテーションタスクでは、3次元のX線CTボリュームデータを扱うため、3D CNNや、複数スライスをチャンネルや時間軸として入力する2.5Dアプローチが上位解法で広く採用されました。特に**U-Netベースのアーキテクチャ**が主流であり、エンコーダーには3D ResNet系（ir-CSN, ResNet-C3Dなど）、SegFormer、EfficientNet、MaxViT、CoAt、Swin Transformerなど多様なモデルが用いられました。
+ヴェスヴィオ火山の噴火で炭化した巻物からインク（文字）を検出するこのセグメンテーションタスクでは、3次元のX線CTボリュームデータを扱うため、**3D CNN**や、複数スライスをチャンネルや時間軸として入力する**2.5D CNN**アプローチが上位解法で広く採用されました。特に**U-Netベースのアーキテクチャ**が主流であり、エンコーダーには3D ResNet系（ir-CSN, ResNet3Dなど）、SegFormer、EfficientNet、MaxViT、ConvNeXt、MViTv2などが多様に用いられました。
 
-データの特性として、**z軸（深さ方向）のインク位置がフラグメント間で異なる**こと、アノテーションにノイズが含まれること、また一部で**ラベル（マスク）と画像の0.5ピクセルのずれ**が報告されたことが挙げられます。これらに対処するため、深さ方向に不変なモデル構造の工夫（プーリング、Attention）、ソフトターゲット（複数アノテーションの平均）の使用、ピクセルずれ補正、信頼性の高いCV（交差検証）戦略の構築、ノイズに頑健な損失関数やAugmentationの選択などが重要なテクニックとなりました。
+データの特性として、**z軸（深さ方向）のインク位置がフラグメント間で異なる**こと、アノテーションにノイズが含まれること、また一部で**ラベル（マスク）と画像の0.5ピクセルのずれ**が報告されたことが挙げられます。これらに対処するため、**深さ方向に不変 (depth-invariant)** なモデル構造の工夫（3D Encoder + 2D Decoder、Depth Pooling、Attentionなど）、ソフトターゲット（複数アノテーションの平均）の使用、ピクセルずれ補正、信頼性の高いCV（交差検証）戦略の構築（例: fragment 2を分割）、ノイズに頑健な損失関数やAugmentationの選択などが重要なテクニックとなりました。
 
-学習においては、大きなパッチサイズや高解像度入力、EMA（指数移動平均）やSWA（確率的重み平均化）、強力な正則化（Augmentation、Dropout、Label Smoothing）、段階的学習などが有効でした。推論では、TTA（Test Time Augmentation）、複数モデルのアンサンブル、閾値の最適化（固定値またはパーセンタイル）、後処理（小領域除去など）がスコア向上に貢献しました。
+学習においては、**大きなパッチサイズ**や高解像度入力、EMA（指数移動平均）やSWA（確率的重み平均化）、強力な正則化（Augmentation、Dropout、Label Smoothing、CutMix/MixUp）、段階的学習（低解像度→高解像度）、**疑似ラベル**の活用などが有効でした。入力スライス数の選択（16〜48枚程度）も重要でした。
+
+推論では、**TTA（Test Time Augmentation）**（回転、フリップ）、複数モデルのアンサンブル、**閾値の最適化**（固定値、パーセンタイル）、**後処理**（小領域除去など）がスコア向上に貢献しました。特に閾値設定はスコアへの影響が大きく、慎重な調整が求められました。
 
 **各解法の詳細**
 
-**1位**
+**[1位](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection/discussion/417496)**
 
-- **アプローチ:** U-Net + MaxViT。ラベルの0.5ピクセルずれを発見し、対称化ラベルで学習後、小さなCNNで補正する独自手法。単一時刻と4時刻パネル入力モデルのアンサンブル。
-- **アーキテクチャ:** U-Net + MaxViT_tiny_tf_512 Encoder。ずれ補正用Conv5x5。
-- **アルゴリズム:** BCE Loss。AdamW。Cosine Annealing w/ Warmup。8-TTA (rot90, flip)。閾値最適化。連結成分除去。
-- **テクニック:**
-    - **ラベル処理:** ソフトターゲット（アノテーション平均）。0.5ピクセルシフトした対称化ラベル(y_sym)でU-Net学習。学習済み特徴量から小さなCNNで元の右下ズレ(y)へマッピング学習。
-    - **入力:** Ash color画像。高解像度(1024x1024)。単一時刻(t=4) / 4時刻(t=1-4)パネル入力。
-    - **Augmentation:** RandomRotate90, HorizontalFlip, ShiftScaleRotate（ラベルずれ補正により有効化）。
-    - **アンサンブル:** 単一時刻モデルと4時刻パネルモデルの5-Fold平均 x 8TTA結果を重み付き平均。
+* **アプローチ:** 3Dモデル (UNETR) + 2Dモデル (SegFormer) の2段階構成。大きなクロップサイズ (1024x1024)。複数モデルのアンサンブル。
+* **アーキテクチャ:** Stage 1: 3D UNETR。Stage 2: SegFormer-b5。
+* **アルゴリズム:** BCE + Dice Loss。AdamW + Gradual Warmup Scheduler。SWA。
+* **テクニック:**
+    * **データ処理:** 中央16スライスを入力。大きなクロップサイズ (1024x1024)。ブランクでないクロップのみ使用。
+    * **モデル構造:** 3D UNETRで3D情報を集約し、中間特徴量 (32ch) を生成。これをZ軸方向に最大値プーリングで2D特徴量 (32ch, 1024x1024) に変換し、SegFormer-b5に入力して最終的なセグメンテーションを行う。この構造が深さ不変性を実現。
+    * **Augmentation:** フリップ、90度回転、輝度コントラスト、Channel Dropout、ShiftScaleRotate、ノイズ、ブラー、Coarse Dropout、Grid Distortion。
+    * **学習:** Fragment 1を検証用とし、2, 3で学習後、全データで再学習。
+    * **アンサンブル:** 9つのモデル（異なる1st/2nd stageモデル、異なる解像度、SWA有無など）をアンサンブル。
+    * **後処理:** 閾値 (0.5) で二値化後、10000ピクセル未満の連結成分を除去。
 
-**2位 (tattaka & mipypf part)**
+**[2位](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection/discussion/417255)**
 
-- **アプローチ:** 2.5D/3D CNN。アップサンプリングなしの低解像度(1/32)予測。強い正則化。パーセンタイル閾値。
-- **アーキテクチャ:** 2.5D: 2D CNN Backbone (ResNetRS, ConvNeXt, SwinV2など) + Pointwise Conv2D Neck + 3D CNN (ResBlockCSN)。3D: 3D CNN Backbone (ResNet50/152-irCSN)。Decoderはシンプル。
-- **アルゴリズム:** BCE + Global Fbeta Loss。Label Smoothing。CutMix, MixUp, Manifold MixUp。EMA。TTA (flip, 時間ストライド毎切替)。Percentile Threshold。
-- **テクニック:**
-    - **データ:** Group K-Fold (Fragment 2分割)。低解像度(256^2/192^2)入力、ターゲットも1/32にダウンサンプル。サンプル毎正規化。高速化のためパッチ保存。
-    - **入力層:** 中間35層または27層を使用。
-    - **学習:** AMP、EMA、Label Smoothing、Drop Path、MixUp系。重度Augmentation (Flip, Rotate, ShiftScaleRotate, Elastic, Blur, Noise, Distortion, BrightnessContrast, Cutout, Channel Shuffle, Z軸シフト)。
-    - **推論:** FP16。ストライド32。TTA。パーセンタイル閾値(0.9, 0.93)。マスク外領域除外。
+* **アプローチ:** 2.5Dおよび3D CNN。アップサンプリングなしの低解像度(1/32)予測。強い正則化。パーセンタイル閾値。
+* **アーキテクチャ:**
+    * 2.5D: 2D CNN Backbone (ResNetRS, ConvNeXt, SwinV2, ResNeXtなど) + Pointwise Conv2D Neck + 3D CNN (ResBlockCSN)。
+    * 3D: 3D CNN Backbone (ResNet50/152-irCSN) + Pooling + Pointwise Conv2D。Decoderはシンプル。
+* **アルゴリズム:** BCE + Global Fbeta Loss。Label Smoothing。CutMix, MixUp, Manifold MixUp。EMA。TTA (flip, 時間ストライド毎切替)。Percentile Threshold。
+* **テクニック:**
+    * **データ:** Group K-Fold (Fragment 2を3分割)。入力解像度256x256 (2.5D) or 192x192 (3D)。ターゲットも1/32にダウンサンプル。高速化のためパッチをnpyで保存。サンプル毎正規化。
+    * **入力層:** 中央35層または27層を使用。
+    * **学習:** AMP、EMA、Label Smoothing、Drop Path、MixUp系。強力なAugmentation (Flip, Rotate, ShiftScaleRotate, Elastic, GaussianBlur, GaussNoise, OpticalDistortion, GridDistortion, PiecewiseAffine, BrightnessContrast, Cutout, Channel Shuffle, Z軸シフト)。
+    * **推論:** FP16。ストライド32。TTA (フリップ、時間ストライド毎切替)。パーセンタイル閾値(0.9, 0.93)を適用し、常に一定割合の陽性ピクセルを予測。マスク外領域除外。
 
-**2位 (yukke42 part)**
+**[3位](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection/discussion/417536)**
 
-- **アプローチ:** 3D CNN/Transformer Encoder + シンプルな2D/1D Decoder。低解像度予測。
-- **アーキテクチャ:** Encoder: 3D CNN (ResNet18/34ベース), MViTv2-s。Decoder: 単層2D CNN or Linear + Patch Expanding。
-- **アルゴリズム:** BCE (+Dice?)。Label Smoothing。CutMix, MixUp。
-- **テクニック:**
-    - **データ:** Fragment 2を垂直分割した4-Fold CV。
-    - **モデル:** 3D CNNはMaxPool除去、Attention追加。MViTv2は各スケール出力を利用。Decoderはシンプル化。出力は1/2 or 1/4解像度→Bilinearでアップサンプル。
-    - **学習:** AMP、torch.compile。Label Smoothing、Cutout、CutMix、MixUp。Augmentation (Flip, Rotate, ShiftScaleRotateなど)。Patch Size 224, Stride 112。
-    - **推論:** FP16。Stride 75。予測のエッジ部分を無視。
+* **アプローチ:** 3D Encoder (ir-CSN) + 2D Decoder (U-Net)。チャンネル数と解像度を変えたモデルのアンサンブル。
+* **アーキテクチャ:** 3D ir-CSN (ResNet50, ResNet152) Encoder + Mean Pooling (Z軸方向) + 2D U-Net Decoder。
+* **アルゴリズム:** BCE + Dice Loss (重み付き平均)。AdamW + OneCycle Scheduler。EMA。
+* **テクニック:**
+    * **データ分割:** Fragment 2を3分割し、5 Fold CV。
+    * **入力:** 24, 32, 48スライスを試行。24スライスが主。パッチサイズは224x224, 384x384, 576x576, 640x640を実験。大きいサイズは過学習傾向。クロップStrideはサイズに応じて調整。
+    * **特徴量入力:** 3スライスを重ねて3チャンネル入力とし、事前学習済み重みを活用。
+    * **Augmentation:** Tanaka氏ベースライン + rotate_limit=180。MixUp, CutMixも試行。
+    * **学習:** クリーンな入力（全ゼロでない）のみ使用。DDP、勾配蓄積を使用（大解像度時）。
+    * **推論:** 小さいStrideを使用。TTAなし（回転TTAは効果薄）。閾値0.5固定。
+    * **アンサンブル:** 異なる入力サイズ（224, 384, 576）、異なるバックボーン（r50, r152）、異なるFoldの計15モデルをアンサンブル。
 
-**3位**
+**[4位](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection/discussion/417779)**
 
-- **アプローチ:** 3Dエンコーダ(ir-CSN) + 2D U-Netデコーダ。複数クロップサイズ推論のアンサンブル。
-- **アーキテクチャ:** Encoder: ir-CSN-r50/r152 (OpenMMLab)。Decoder: U-Net (軽量版、チャンネル256開始)。
-- **アルゴリズム:** BCE + Hard Dice Loss。AdamW。OneCycle Scheduler。EMA。TTA (4回転)。
-- **テクニック:**
-    - **データ:** Fragment 2を3分割した5-Fold CV。入力層選択(24層 or 32層)。複数クロップサイズ(224, 384, 576, 640)。ストライドはサイズによる。入力正規化。ゼロ入力フィルタリング。
-    - **入力処理:** 時間次元(z)をチャンネル次元に結合（オーバーラップあり）。
-    - **学習:** Augmentation (Flip, Rotate, ShiftScaleRotateなど)、MixUp, CutMix。EMA。DDP、勾配蓄積（大規模パッチ）。
-    - **推論:** 複数クロップサイズ(224, 384, 576)のモデルをアンサンブル。TTA (4回転)。閾値0.5。
+* **アプローチ:** 3D ResNet/ResNeXt Encoder + U-Net様Decoder。時間方向のランダムクロップ/ペースト/カットアウトAugmentation。低FP重視のチェックポイント選択。
+* **アーキテクチャ:** 3D ResNet (152, 200), 3D ResNeXt101 Encoder + U-Net様Decoder。
+* **アルゴリズム:** CrossEntropyLoss (Label Smoothing 0.3)。AdamW + Cosine Annealing with Warmup。CutMix。
+* **テクニック:**
+    * **データ:** 4 Fold CV (Fragment 2を2分割)。入力256x256、22スライス (21-42層)。
+    * **独自Augmentation:** Temporal Random Crop & Paste & Cutout。入力22層からランダムに12-22層をクロップし、ランダムな位置にペースト。さらに0-2層をランダムにゼロ埋め（Temporal Cutout）。これにより深さ方向の汎化を促進。
+    * **チェックポイント選択:** CVスコアだけでなく、**偽陽性(FP)が少ない**エポックの重みを選択・アンサンブルする戦略。
+    * **画像Augmentation:** フリップ、回転(360°)、輝度コントラスト、ガンマ、ノイズ、ブラー、ShiftScaleRotate、CoarseDropout。
+    * **データ前処理:** ピクセル値を[50, 200]にクリッピング。
+    * **アンサンブル:** 3種類の3Dバックボーン x 4 Foldのモデルをアンサンブル。
 
-**4位 (DS Annotation Experts)**
+**[5位](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection/discussion/417642)**
 
-- **アプローチ:** 3Dモデルに独自の時間軸Augmentation (Random Crop & Paste) を適用。偽陽性の少ない重み選択。
-- **アーキテクチャ:** 3D ResNet152, 3D ResNet200, 3D ResNeXt101 + U-NetライクDecoder。
-- **アルゴリズム:** CrossEntropy Loss (Label Smoothing 0.3)。AdamW。Cosine Annealing w/ Warmup。CutMix。閾値最適化。
-- **テクニック:**
-    - **Temporal Augmentation:** 時間軸(z)でランダムに12-22層クロップ → ランダムな位置にペースト → ランダムに0-2層カットアウト。
-    - **データ:** 4-Fold CV (Fragment 2分割)。入力層選択(21-42層)。画像クリッピング(50-200)。
-    - **重み選択:** 各エポックで保存し、Validationスコアと偽陽性(FP)数を基に低FPの重みを選択。
-    - **モデル:** Kinetics事前学習済み3D ResNet/ResNeXt利用。
-    - **学習:** Label Smoothing、CutMix。
-    - **Augmentation:** Flip, Rotate, RandomGamma, BrightnessContrast, Noise, Blur, ShiftScaleRotate, CoarseDropout。
-    - **推論:** 複数モデルアンサンブル。閾値はCVで最適化（0.47または0.5）。
+* **アプローチ:** 3D ResNetモデルのアンサンブル。Mosaic Augmentationを含む強力なAugmentation。
+* **アーキテクチャ:** 3D ResNet18, 3D ResNet34 + U-Net様Decoder?
+* **アルゴリズム:** BCE Loss。AdamW + GradualWarmupScheduler。
+* **テクニック:**
+    * **データ:** 4 Fold CV (Fragment 2を2分割)。入力256x256、32スライス (16-48層)。
+    * **Augmentation:** **Mosaic Augmentation** を適用。さらに多様なAlbumentations（フリップ、回転、輝度、ノイズ、ブラー、歪み、ShiftScaleRotate、CoarseDropout）を適用。
+    * **学習:** 50 epochs。FP16。
+    * **推論:** ResNet18 (Fold 1, 2a) + ResNet34 (4 Fold) の計6モデルをアンサンブル。タイルサイズ1024x1024、Stride 512。タイルの端に近い予測を除外。閾値0.5。TTA (4回転、フリップ)。後処理でノイズ除去。
 
-**5位**
+**[6位](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection/discussion/417274)**
 
-- **アプローチ:** 3D ResNetモデル。Mosaic Augmentation。高解像度推論とTTA。
-- **アーキテクチャ:** 3D ResNet18, 3D ResNet34。
-- **アルゴリズム:** BCE Loss。AdamW。GradualWarmupScheduler。TTA (4回転 + h/v flip)。
-- **テクニック:**
-    - **データ:** 4-Fold CV (Fragment 2分割)。タイルサイズ256、ストライド128。入力32層(16-48)。空白タイル無視。
-    - **Augmentation:** Mosaic Augmentation、Albumentations (Flip, Rotate90, ShiftScaleRotate, Elastic, Blur, Noise, Optical/Grid Distortion, PiecewiseAffine, BrightnessContrast)。
-    - **学習:** 50エポック、FP16。
-    - **推論:** タイルサイズ1024、ストライド512。TTA (4回転+Flip)。タイルのエッジ付近の予測を無視。閾値0.5。ノイズ除去。
-    - **アンサンブル:** 2 Fold ResNet18 + 4 Fold ResNet34。
+* **アプローチ:** EfficientNet (U-Net Decoder) と SegFormerのアンサンブル。IR画像を補助入力として利用。推論時の回転とパーセンタイル閾値。
+* **アーキテクチャ:** EfficientNet-B6/B7 + U-Net Decoder、SegFormer-B3。
+* **アルゴリズム:** SoftBCEWithLogitsLoss。Adam + Cosine Schedule with Warmup。
+* **テクニック:**
+    * **特徴量:** CT画像スライスに加え、**赤外線(IR)画像**をチャンネルとして追加（CNNモデル）。SegFormerは3チャンネル入力のため、異なるスライス組み合わせ（中央のみ、中央+IR、中央+平均など）で学習し平均。
+    * **データ分割:** 7-Fold または 10-Fold CV。Fold数を増やすとCV/LBともに向上。
+    * **推論:** テストデータが回転していると仮定し、**推論時に入力画像を90度回転**させて予測し、結果を逆回転させる。TTA (Horizontal Flip)。
+    * **閾値:** パーセンタイル閾値を使用（Public LBでは0.96、Private LBでは0.95が最適だった）。閾値の選択に注意。
+    * **アンサンブル:** 複数のEfficientNetモデルとSegFormerモデルの予測値を平均。
 
-**6位**
+**[7位](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection/discussion/417430)**
 
-- **アプローチ:** EfficientNet+UNetとSegFormerのアンサンブル。推論時の画像回転とパーセンタイル閾値が特徴。IR画像入力も試行。
-- **アーキテクチャ:** CNN+UNet (EfficientNet_b6/b7_ns, EfficientNetV2_l)。 SegFormer (b3)。
-- **アルゴリズム:** SoftBCEWithLogitsLoss。Adam。Cosine Schedule w/ Warmup。TTA (h flip)。Percentile Threshold。
-- **テクニック:**
-    - **推論フロー:** Fragment A, B結合→時計回り回転→推論(元+hflip TTA)→逆回転→分割・エンコード。
-    - **入力:** IR画像(z>45平均)をチャンネル追加。SegFormerは3ch。
-    - **閾値:** パーセンタイル閾値を使用（LB probingとValidationで0.96または0.95）。
-    - **学習:** 高k-fold数(7, 10)が有効。勾配ノルムクリッピング。マスク外領域除外。
-    - **アンサンブル:** 複数モデル(EffNet B6/B7/V2L, SegFormer B3)の平均。
+* **アプローチ:** nnU-Netフレームワークを利用。3D Encoder + 2D Decoderアーキテクチャ。SEブロックによるスライス重み付け。
+* **アーキテクチャ:** nnU-Netベースのカスタムアーキテクチャ。3D Encoder（各ステージ4層Conv）+ 2D Decoder（各ステージ2層Conv）。Skip Connectionに**Squeeze-and-Excitation (SE) ブロック**を適用（チャンネル方向ではなく**深さ(Z)方向**に適用し、スライスごとの重要度を学習）。
+* **アルゴリズム:** nnU-Netデフォルト（Dice+CE Loss?）。AdamW?
+* **テクニック:**
+    * **データ分割:** 各Fragmentを前景領域が均等になるように25分割し、5 Fold CV。
+    * **入力:** 32スライスを選択（強度分布の中央付近）。パッチサイズ 32x512x512。FragmentごとのZ-score正規化。強度値を0.5-99.5パーセンタイルでクリッピング。
+    * **Augmentation:** nnU-Netデフォルト拡張（回転、スケール、ノイズ、ブラー、輝度/コントラスト、ガンマ、ミラーリング）を使用。回転はXY平面内のみ。
+    * **学習:** バッチサイズ2または4。Weight Decay 3e-5または1e-4。
+    * **アンサンブル:** 性能の良かった2 Fold x 2モデル（異なるバッチサイズ/WD）の重みをアンサンブル。
+    * **TTA:** 全軸ミラーリング + XY平面内90度回転 (計8パターン)。
+    * **後処理:** ①閾値を0.6に上げ、さらに連結成分解析で95パーセンタイル値<0.8の成分を除去。②予測結果にさらに2D U-Net (入力2048x2048) を適用してリファイン。①の方がPrivate LBは良かった模様。
 
-**7位**
+**[8位](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection/discussion/417383)**
 
-- **アプローチ:** nnU-Netフレームワークベースのカスタム3D Encoder + 2D Decoder U-Net。SEブロックによる深さ方向の重み付け。
-- **アーキテクチャ:** 3D Encoder + 2D Decoder U-Net。Skip接続にSEブロック挿入（深さ次元Attention）。Encoderは各ステージ4 Conv、Decoderは2 Conv。
-- **アルゴリズム:** Dice + BCE Loss (nnU-Net)。TTA (ミラーリング、90度回転)。後処理（連結成分解析、2D U-Netリファインメント）。
-- **テクニック:**
-    - **フレームワーク:** nnU-Net利用。
-    - **データ準備:** Fragmentを25分割し5-Fold作成（前景ピクセル数均等化）。入力32層（強度分布の中間点周り）。Z-scoring正規化、パーセンタイルクリッピング、Fragment毎正規化。パッチサイズ 32x512x512。
-    - **モデル:** 3D Encoder特徴マップをSEブロックで深さ方向に重み付けし平均化して2D Decoderへ。
-    - **Augmentation:** nnU-Netデフォルト + 平面内回転、スケーリング、ノイズ、Blur、輝度/コントラスト、低解像度シミュレーション、ガンマ、ミラーリング。
-    - **推論:** TTA (全軸ミラーリング + 90度回転、計8パターン)。
-    - **後処理:** ①閾値上げ(0.6)+連結成分解析（Softmax 95パーセンタイル<0.8除去）、②後段2D U-Netによるリファインメント（高解像度入力）、の2種試行（Privateではマイナス効果）。
-    - **アンサンブル:** 2 Fold x 2モデル（異なるBS/WD）のアンサンブル。
+* **アプローチ:** 3D ResNet/SEResNet Encoder + U-Net Decoder。複数モデルのアンサンブル。チャンネル方向のTTA。
+* **アーキテクチャ:** 3D SEResNet101, 3D ResNet34 Encoder + U-Net Decoder。SegFormer-b3も使用。
+* **アルゴリズム:** BCE + Dice Loss。
+* **テクニック:**
+    * **データ:** 3-Fold CV (Fragment 1, 2, 3) または 4-Fold CV (Fragment 2を上下分割)。
+    * **入力:** ランダムに20チャンネル (スライス) を15-40層の間から選択。解像度は192x192, 224x224, 256x256など複数試行。
+    * **Augmentation:** 異なる解像度でのリサイズ、Z軸方向の圧縮、3D回転、Channel Dropout、フリップ、回転、Albumentations (輝度コントラスト、歪み、ノイズ、ブラーなど)。
+    * **学習:** 3D SEResNet101は2段階学習（低解像度→高解像度）。
+    * **推論:** **チャンネルTTA:** 推論時に15-40層を5層ずつスライドさせながら20チャンネルウィンドウで複数回予測し平均。Rotation TTA (90度)。FP16。
+    * **後処理:** 推論時にエッジピクセルを除外。閾値は固定 (0.55) と動的 (パーセンタイル3%) の2通りで提出。
+    * **アンサンブル:** 5つのモデル（3D SEResNet101, SegFormer x2, 3D ResNet34 x2）の予測を重み付き平均。
 
-**8位**
+**[9位](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection/discussion/417361)**
 
-- **アプローチ:** 3Dモデル(SEResNet, ResNet)と2Dモデル(SegFormer)のアンサンブル。時間軸方向TTA（Channel TTA）。固定/動的閾値。
-- **アーキテクチャ:** 3D Encoder: 3D SEResNet101, 3D ResNet34。 2D Encoder: SegFormer-b3。 Decoder: UNet。
-- **アルゴリズム:** BCE + Dice Loss。TTA (rot90, channel TTA)。固定閾値(0.55) or Percentile Threshold (上位3%)。
-- **テクニック:**
-    - **データ:** 3-Fold or 4-Fold CV。
-    - **入力:** 3Dモデルは20ch入力(15-40)。SegFormerは3ch入力（11chをグループ化しAttention Pooling or 6chをグループ化しLogit平均）。
-    - **前処理:** 最大ピクセル値クリッピング(0.78)。
-    - **Augmentation:** リサイズ(3種)、Z次元圧縮、3D回転、Channel Dropout、Rotate/Flip、Albumentations。
-    - **学習:** BCE+Dice損失。マスク外領域除外。
-    - **推論:** FP16。TTA (90度回転)。Channel TTA（3D SEResNetのみ、Window 20, Stride 5でスライドし平均）。エッジピクセル除去。閾値（固定0.55 or 上位3%）。
-    - **アンサンブル:** 5モデル（3D SEResNet101, SegFormer Attention/LogitAvg, 3D ResNet34 x2）の重み付き平均。
+* **アプローチ:** 3D CNN + 2D DecoderとTransformerベースモデルのアンサンブル。
+* **アーキテクチャ:**
+    * ResNet34D + U-Net Decoder (3D CNN + 2D Decoder)。
+    * PVTv2-B3 + DAFormer Decoder (Transformerベース)。
+* **アルゴリズム:** 不明 (BCE + Diceなどか？)。
+* **テクニック:**
+    * **データ分割:** 2 Fold CV (Validation: fragment-1, fragment-2aa)。
+    * **入力:** ResNet34Dは256x256, 32スライス。PVTv2は384x384, 16スライス。
+    * **アンサンブル:** 上記2モデル x 2 Foldの計4モデルをアンサンブル。
 
-**9位**
+**[10位](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection/discussion/417363)**
 
-- **アプローチ:** 2.5D U-Netモデルのアンサンブル。ResNet34dとPVTv2-b3エンコーダーを使用。
-- **アーキテクチャ:** U-Net。Encoder: resnet34d, pvtv2-b3-daformer。
-- **アルゴリズム:** BCE + Dice Loss (推定)。
-- **テクニック:**
-    - **データ:** Fragment 2を分割した2-Fold CV。入力32層または16層。
-    - **モデル:** 2.5Dアプローチ。
-    - **その他:** hengck氏の公開議論・コードを参考に実装。
-
-**10位**
-
-- **アプローチ:** 3D Encoder (ResNet3D) + 2D FPN Decoder。InkClassifier3DCNNでの事前学習。Attention Pooling。データサンプリング戦略。Denoiser後処理。
-- **アーキテクチャ:** Encoder: ResNet3D (resnet10t?, InkClassifier3DCNNで事前学習)。 Decoder: FPN。 Pooling: Attention Pooling。 Denoiser: UNet (tu-resnet10t)。
-- **アルゴリズム:** BCE Loss。AdamW。Attention Pooling。
-- **テクニック:**
-    - **事前学習:** InkClassifier3DCNNで3D Encoderを事前学習。
-    - **データ:** 5-Fold CV (Fragment 2分割)。解像度224、ストライド56。入力16層(20-36層)。インク陽性:陰性=1:8でサンプリング。
-    - **Pooling:** Depth方向のAttention Pooling（学習可能な重み）。
-    - **Denoiser:** UNetベースのDenoiserで最終予測マスクからノイズ成分を減算。
-    - **Augmentation:** Flip, Rotate, Affine, ToneCurve, BrightnessContrast, ShiftScaleRotate, Elastic, GridDistortion, Noise, Blur, MotionBlur, CoarseDropout, Normalize。
-    - **推論:** TTA (rot90 x3 + original)。閾値はCVで決定。
+* **アプローチ:** 3D Encoder + 2D FPN Decoder。Attention Pooling。インク領域と非インク領域のサンプリング比調整。デノイザー追加。
+* **アーキテクチャ:** 3D ResNet Encoder + Attention Pooling (Z軸方向) + 2D FPN Decoder。追加のデノイズ用U-Net。
+* **アルゴリズム:** BCE Loss。AdamW。
+* **テクニック:**
+    * **事前学習:** ink-idのInkClassifier3DCNNで3D Encoderを事前学習（CVが0.03-0.06向上）。
+    * **データ分割:** 5 Fold (Fragment 2を3分割)。
+    * **入力:** 224x224、16スライス (20-36層)。
+    * **サンプリング:** インクを含む領域1に対して、全くインクを含まない領域を8の比率でサンプリング。
+    * **Attention Pooling:** Z軸方向に適用するシンプルなAttention Pooling層を自作。
+    * **Denoiser:** 最終出力マスクからノイズ成分を予測するU-Net (tu-resnet10t encoder) を追加し、元の予測から差し引く。
+    * **Augmentation:** 多様なAlbumentations。
+    * **推論:** TTA (3 x rot90 + オリジナル)。閾値はCVに基づいて決定（パーセンタイル93%は不採用）。
 

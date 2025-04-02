@@ -1,159 +1,140 @@
 ---
 tags:
   - Kaggle
+  - スピアマンの順位相関係数
+  - GNN
+  - SageConv
+  - GraphTransformer
 startdate: 2023-08-30
 enddate: 2023-11-18
 ---
 # Google - Fast or Slow? Predict AI Model Runtime
-https://www.kaggle.com/competitions/predict-ai-model-runtime
+[https://www.kaggle.com/competitions/predict-ai-model-runtime](https://www.kaggle.com/competitions/predict-ai-model-runtime)
 
 **概要 (Overview)**
 
-* **目的:** このコンペティションの目的は、与えられたKaggleノートブック（AIモデルのトレーニングや推論コードを含む）が、特定のハードウェア環境（例：Kaggleの標準GPU環境）で**実行完了するまでにかかる時間（ランタイム）を予測する**モデルを開発することです。
-* **背景:** AIモデルの実行時間を事前に知ることは、計算リソースの計画、コードの最適化、予算管理、ユーザーへの推定完了時間の提示などにおいて非常に重要です。特にKaggleのノートブック環境のように実行時間制限がある場合、ランタイムを予測できればタイムアウトを避け、より効率的に開発を進めることができます。
-* **課題:** ノートブックには多種多様なコード（単純なデータ処理から複雑な深層学習モデルまで）、ライブラリ依存関係、ループ構造、データサイズなどが含まれており、静的なコード情報から動的な実行時間を正確に予測することは本質的に困難です。また、実行時間はハードウェア（CPU、GPUの種類、メモリ量）に大きく依存します。さらに、ネットワーク遅延やシステム負荷などの外部要因も実行時間に影響を与える可能性があります。ノートブックのコードから効果的な特徴量（例：セル数、演算の種類、ライブラリの使用状況）を抽出し、それらを用いてランタイムを予測するモデルを構築する必要があります。これは**回帰（Regression）** タスクです。
+* **目的:** このコンペティションの目的は、与えられたAIモデルの計算グラフとその設定（コンフィグ）に基づいて、特定のハードウェア（Google TPU v3）上での**実行時間を予測する**モデルを開発することです。
+* **背景:** GoogleはTensor Processing Unit (TPU) などのAIアクセラレータを開発・提供しています。AIモデルの実行時間は、モデルの構造、演算子の種類、設定、ハードウェア特性など多くの要因に依存し、事前に正確に見積もることは困難です。実行時間を予測できれば、モデル開発サイクルの効率化（例: 遅いモデル構造の早期発見）、ハードウェアリソースの最適化、コンパイラの最適化戦略決定などに役立ちます。
+* **課題:**
+    * **グラフ構造の表現:** AIモデルの計算グラフ（ノードとエッジ）を効果的に表現し、モデルの入力とする必要があります。グラフニューラルネットワーク (GNN) が自然な選択肢となりますが、グラフのサイズが大きい場合（特にLayoutデータ）の計算コストが課題です。
+    * **多様な設定（コンフィグ）:** 同じグラフ構造でも、ノードの設定（例: 畳み込みのカーネルサイズやストライド、テンソルのレイアウト）によって実行時間が大きく変動します。この設定情報をどうモデルに組み込むかが重要です。
+    * **ハードウェア特性の暗黙的な学習:** 特定のハードウェア (TPU v3) 上での実行時間を予測するため、モデルはハードウェアの特性をデータから暗黙的に学習する必要があります。
+    * **ランキング評価:** 評価指標はKendall Tau相関係数であり、実行時間の絶対値を予測するだけでなく、異なる設定間での実行時間の相対的な順序（ランキング）を正確に予測することが求められます。
+    * **データセットの分割:** データは目的（`layout` または `tile`）とデータソース（`xla` または `nlp`）によって分割されており、それぞれ特性が異なるため、個別のモデル開発やドメイン適応が必要になる場合があります。
 
 **データセットの形式 (Dataset Format)**
 
-提供される主なデータは、Kaggleノートブックファイルとその実際の実行時間です。これは通常「Code」コンペティション形式で提供されます。
+データは、AIモデルの計算グラフ構造、ノードの特徴量、設定情報、および対応する実行時間から構成されます。データは5つのコレクション（`layout:xla:random`, `layout:xla:default`, `layout:nlp:random`, `layout:nlp:default`, `tile:xla`）に分かれています。
 
-1.  **トレーニングデータ:**
-    * `train.csv` (など): トレーニング用ノートブックのメタデータと実行時間。通常、`id`（ノートブック識別子）と**ターゲット変数**である `runtime`（秒単位の実行時間）の列を含みます。コードサイズやセル数などの事前抽出された特徴量を含む場合もあります。
-    * `train_notebooks/` (など): 実際のノートブックファイル（`.ipynb`形式など）が格納されたディレクトリ。`id` に対応するノートブックが含まれます。参加者はこれらのノートブックファイルを解析して特徴量を抽出する必要があります。
-
-2.  **テストデータ:**
-    * `test.csv` (など): テスト用ノートブックのメタデータ（例: `id`）。
-    * `test_notebooks/` (など): 実行時間を予測する必要があるテスト用のノートブックファイル。
-    * テストデータには正解の `runtime` は含まれません。提出されたモデル（多くの場合、それ自体がKaggleノートブック）が、隠されたテストノートブックに対して実行され、予測値を生成します。
-
-3.  **提出形式 (Submission Format):**
-    * 通常、Kaggleノートブックとして提出します。
-    * この提出ノートブックは、提供されるテストデータ（ノートブックファイルやメタデータ）を読み込み、各テストノートブックのランタイムを予測し、指定された形式の `submission.csv` ファイルを出力する必要があります。
-    * `submission.csv` ファイルには、`id`（テストノートブック識別子）と `runtime`（予測された実行時間）の列が含まれます。
+1.  **ファイル形式:** 各コレクションのデータはNumPyの `.npz` 形式で提供されます。各ファイルには、1つの計算グラフに対する複数の設定とその実行時間データが含まれます。
+2.  **データフィールド:** 各 `.npz` ファイルには主に以下のデータが含まれます。
+    * `node_feat`: 各ノードの特徴量ベクトル (形状: `[num_nodes, 140]`)。テンソル形状、レイアウト情報などが含まれる。
+    * `node_opcode`: 各ノードの操作コード（演算子の種類）を示す整数ID (形状: `[num_nodes]`)。
+    * `edge_index`: グラフのエッジ（ノード間の接続）を示すテンソル (形状: `[2, num_edges]`)。
+    * `node_config_feat`: 各ノードの設定（コンフィグ）に関する特徴量ベクトル (形状: `[num_configs, num_nodes, 18]`)。設定可能なノード以外はパディングされている。
+    * `node_config_ids`: 設定（コンフィグ）を持つノードのインデックス (形状: `[num_config_nodes]`)。
+    * `config_runtime`: **ターゲット変数**。各設定に対応する実行時間 (形状: `[num_configs]`)。
+    * `config_feats` (Tileデータのみ): タイル分割の設定に関する特徴量 (形状: `[num_configs, 128]`)。
+3.  **分割:** 主催者によって、各コレクションごとに `train`, `valid`, `test` のグラフIDリストが提供されます。
 
 **評価指標 (Evaluation Metric)**
 
-* **指標:** **スピアマンの順位相関係数 (Spearman's Rank Correlation Coefficient, Spearman's ρ)**
+* **指標:** **Kendall Tau 相関係数 (Kendall Tau Correlation Coefficient)**。ランキングの一致度を測る指標。
 * **計算方法:**
-    1.  実際の実行時間（真の値）を小さい順にランク付けします。
-    2.  モデルが予測した実行時間を小さい順にランク付けします。
-    3.  これら2つの**順位（ランク）** のリスト間のピアソンの積率相関係数を計算します。
-* **意味:** この指標は、モデルが予測したランタイムの**順序**が、実際のランタイムの**順序**とどれだけよく一致しているかを評価します。絶対的な誤差の大きさ（例：RMSEで評価されるもの）よりも、どのノートブックが他のノートブックより速くまたは遅く実行されるかを正しく順位付けできているかを重視します。これは、スケジューリングや優先順位付けにおいて、正確な秒数を予測することよりも重要である場合が多いためです。また、外れ値の影響を受けにくいという特徴もあります。スコアは-1から1の範囲を取り、**高い**ほど（1に近いほど）、予測された順位と実際の順位の間の正の相関が強いことを示し、モデルの性能が良いと評価されます。
+    * 各グラフについて、モデルが予測した実行時間と実際の実行時間に基づいて、設定（コンフィグ）のペア間の順序関係（どちらが速いか、遅いか、同じか）を比較します。
+    * 全てのペアについて、予測された順序と実際の順序が一致するペア（Concordant pairs）と、一致しないペア（Discordant pairs）の数をカウントします。
+    * Kendall Tau は `(Number of Concordant Pairs - Number of Discordant Pairs) / (Total Number of Pairs)` で計算されます（タイの扱いによって若干のバリエーションあり）。
+    * 最終スコアは、**全てのテストグラフにわたるKendall Tauスコアの平均値**となります。
+* **意味:** モデルが予測した実行時間のランキングが、実際の実行時間のランキングとどれだけ一致しているかを評価します。実行時間の絶対値の誤差ではなく、**相対的な順序の正しさ**を重視します。スコアは -1 (完全な逆順) から +1 (完全な一致) の範囲を取り、**高い**ほど良い性能を示します (0はランダムな順序)。
 
-要約すると、このコンペティションは、Kaggleノートブックの実行時間を予測する回帰タスクです。データはノートブックファイルと実際の実行時間で構成され、性能は予測された実行時間の順序と実際の実行時間の順序の一致度を示すスピアマンの順位相関係数（高いほど良い）によって評価されます。
+要約すると、このコンペティションは、AIモデルの計算グラフと設定情報からTPU上での実行時間を予測するランキングタスクです。データはグラフ構造、ノード特徴、設定、実行時間で構成され、性能はKendall Tau相関係数（高いほど良い）によって評価されます。グラフデータの扱いやランキング学習が鍵となります。
 
 ---
+
 **全体的な傾向**
 
-上位解法では、TPUの計算グラフを入力としてAIモデルの実行時間を予測するために、グラフニューラルネットワーク（GNN）を用いたアプローチが主流でした。特にSageConvが広く採用されましたが、GAT、GIN、TransformerベースのGNNも利用されています。大量のデータと複雑なグラフ構造を扱うため、グラフのプルーニング（削減）や圧縮、部分グラフの利用、効率的なデータローディングといったテクニックが重要でした。コンフィグレーション間の相対的な実行時間を学習するため、ペアワイズ損失（Pairwise Hinge Lossなど）やリストワイズ損失（ListMLEなど）といったランキング学習の手法が広く用いられました。特徴量エンジニアリング（ノード特徴の標準化/対数変換、埋め込み層の活用、追加特徴量の抽出）や、Attentionメカニズムの導入（Self-Channel Attention, Cross-Config Attention, Linformerなど）、モデルのアンサンブルもスコア向上に寄与しました。多くの解法で、データセット（layout, tile）やサブセット（xla, nlp, default, random）ごとにモデルを構築・学習する戦略が取られました。
+このAIモデル実行時間予測コンペでは、グラフ構造とノード設定情報を入力として実行時間のランキングを予測するという課題に対し、**グラフニューラルネットワーク (GNN)** が中心的な役割を果たしました。特に **GraphSAGE (SAGEConv)** や **Graph Attention Network (GAT, GATv2)**、**Graph Isomorphism Network (GIN)**、**APPNP** といった畳み込み層や、それらを組み合わせたアーキテクチャが広く採用されました。**Transformer** をグラフ構造に適用する試みも見られました。
+
+**入力特徴量の処理**が重要であり、ノード特徴量 (`node_feat`) の正規化 (StandardScaler, Log Transform)、操作コード (`node_opcode`) や設定特徴量 (`node_config_feat`, `layout_minor_to_major_*`) に対する**埋め込み (Embedding)** が一般的に行われました。特に、カテゴリ的な特徴量に対して共有埋め込みを用いるなどの工夫が見られました。
+
+Layoutデータセットのグラフサイズが大きいことが計算上のボトルネックであり、多くのチームが**グラフプルーニング**や**サブグラフサンプリング**によって計算効率を改善しました。設定可能なノード (`configurable nodes`) とその近傍ノードのみを抽出する手法や、Dijkstra法で主要パス上のノードを抽出する手法などが用いられました。また、データ読み込みを効率化するために、NPZファイルを再構成したり、設定情報を圧縮したりする工夫も見られました。
+
+**ランキング学習**に特化した損失関数が有効でした。**ペアワイズ損失 (Pairwise Loss)**、特に **Hinge Loss** や **Margin Ranking Loss** が広く用いられました。**Listwise損失 (ListMLE)** も効果的でしたが、数値安定性の問題に対処する必要がありました。1位チームは独自の**DiffMat Loss** (ペアワイズ差分のMargin Ranking Loss) を提案・使用しました。
+
+モデルアーキテクチャでは、GNN層を複数重ね、**残差接続 (Residual Connection)** や **正規化層 (InstanceNorm, LayerNorm, GraphNorm)** を導入することが一般的でした。また、グラフ全体の情報を集約するために**Global Pooling** (Mean, Sum) が用いられました。チャネル間の相互作用を捉えるための**Self-Channel Attention**や、異なる設定（コンフィグ）間の関係を捉える**Cross-Config Attention**といった独自のAttention機構も提案されました。
+
+**学習戦略**としては、データセット（Layout/Tile, XLA/NLP, Random/Default）ごとに**個別のモデルを学習**し、最後にアンサンブルするアプローチが主流でした。勾配累積や、バッチ内でグラフと設定を階層的に扱うサンプリング戦略も用いられました。
+
+**アンサンブル**は最終的なスコア向上に寄与し、異なるモデルアーキテクチャ、異なるFold、異なるランダムシードで学習したモデルの予測値（ランキングスコアや対数尤度など）を単純平均または重み付き平均する手法が取られました。
 
 **各解法の詳細**
 
-**1位**
+**[1位](https://www.kaggle.com/competitions/predict-ai-model-runtime/discussion/456343)**
 
-- **アプローチ:** グラフプルーニングとデータ圧縮で効率化し、GNN（SageConv + Attention）で学習。ランキング損失を使用。
-- **アーキテクチャ:** Linear -> 2 x (InstanceNorm -> SAGEConv -> SelfChannelAttention -> CrossConfigAttention -> +residual -> GELU) -> Global Mean Pooling -> Linear。
-- **アルゴリズム:** SAGEConv、Self-Channel Attention、Cross-Config Attention、PairwiseHingeLoss、AdamW。
-- **テクニック:**
-    - **データ準備:** グラフプルーニング（設定関連ノードとその1ホップ近傍のみ）、重複コンフィグ削除（layout）、特徴量圧縮（node_config_featをBase-7エンコード）、node_featのパディング値を-1に変更。
-    - **前処理:** node_feat[:134]にStandardScaler、node_feat[134:]とnode_config_featに共有埋め込み層、node_opcodeに別埋め込み層。
-    - **学習:** 提供されたtrain/val/test分割を使用。グラフごとに64または128コンフィグをサンプリング。
-    - **Attention:** Self-Channel Attention（Squeeze-and-Excitation風）、Cross-Config Attention（コンフィグ間の比較）。
-    - **推論:** Cross-Config Attentionを利用したTTA（複数回の並び替えと平均化）。
-    - **アンサンブル:** 5-10モデルの単純平均。
+* **アプローチ:** GraphSageベースGNN + Attention機構。グラフプルーニングとデータ圧縮。
+* **アーキテクチャ:** Linear → 2x [InstanceNorm → SAGEConv → SelfChannelAttention → CrossConfigAttention → Residual → GELU] → Global Mean Pooling → Linear。
+* **アルゴリズム:** GNN、Attention。
+* **テクニック:** **グラフプルーニング** (設定ノードとその近傍のみ)。設定情報の**圧縮/オンザフライ解凍**。`node_feat`の-1パディング化と共有Embedding。Pairwise Hinge Loss。**Self-Channel Attention**と**Cross-Config Attention**。TTA (設定順序の置換)。データセット別モデル。
 
-**2位**
+**[2位](https://www.kaggle.com/competitions/predict-ai-model-runtime/discussion/456365)**
 
-- **アプローチ:** SageConvベースのGNNをグラフ全体に適用。ランキング損失（ListMLE, DiffMat Loss）を使用。データ前処理と階層的バッチ構成が特徴。
-- **アーキテクチャ:** SageConv（複数層、Residual接続あり）、Linear（特徴量変換、最終出力）。
-- **アルゴリズム:** SageConv、ListMLE、DiffMat Loss（新規提案: 差分行列の上三角にMargin Ranking Lossを適用）、MAPE損失（XLAのみ併用）、Adam/AdamW、Step学習率スケジュール。
-- **テクニック:**
-    - **データ前処理:** 重複コンフィグ削除（最小ランタイム保持）、不良データ（unet_3d, mlperf_bert）削除、Layoutデータ再パッキング（個別ロード高速化）。
-    - **特徴量:** ノードタイプ埋め込み、ノード特徴量圧縮（sign*log）、コンフィグ特徴量（Tileは全ノードにブロードキャスト）、早期融合（Early Fusion）。
-    - **学習:** 提供された分割を使用。階層的バッチ構成（グラフ単位、コンフィグ単位のマイクロバッチ）。予測値のノルムクリッピング（ListMLE用）。
+* **アプローチ:** GraphSageベースGNN。独自損失 DiffMat Loss。
+* **アーキテクチャ:** SageConvベース (Layout-XLA: 6層、Layout-NLP/Tile: 8層)。
+* **アルゴリズム:** GNN。
+* **テクニック:** データ重複除去(config基準)。破損グラフ除去(Layout-XLA)。NPZ再構成による高速読み込み。**独自損失 DiffMat Loss** (ペアワイズ差分へのMargin Ranking Loss)。ListMLE (Layout-NLP)、MAPE+DiffMat (Layout-XLA)。バッチ階層化(グラフ/設定)。早期融合。データセット別モデル。
 
-**3位**
+**[3位](https://www.kaggle.com/competitions/predict-ai-model-runtime/discussion/456377)**
 
-- **アプローチ:** GNN（GPSレイヤー: SageConv + Linformer + RWPE）を使用。特徴量エンジニアリングとグラフ修正（プルーニング/マージング）を活用。
-- **アーキテクチャ:** GPS Layer (SAGEConv + Linformer + RWPE)、SiLU活性化関数、Layer Normalization。
-- **アルゴリズム:** SAGEConv、Linformer Attention、Learnable Positional Encoding (RWPE)、PairwiseHingeLoss、Adam、Cosine Annealing Scheduler。
-- **テクニック:**
-    - **特徴量:** 全140特徴＋Protobufから追加抽出（dynamic comフラグ、dot/convの引数形状、次元mod/div特徴など）。入力特徴量に対数変換適用。OPコード埋め込み。
-    - **位置エンコーディング:** Random Walk Positional Encoding (RWPE)。
-    - **グラフ修正:** 3種類のプルーニング/マージング戦略（①設定ノードのみ、②設定ノード+入出力、③②に加え非関連ノードをマージ）。仮想出力ノード追加。
-    - **学習:** 複数コレクション同時学習後、個別ファインチューニング。異なるプルーニング戦略で学習したモデルを最終アンサンブルに使用。
+* **アプローチ:** GPSレイヤー (SAGEConv + Linformer) ベースGNN。グラフプルーニング/マージ。
+* **アーキテクチャ:** GPS Layer (SAGEConv + Linformer) ベース。
+* **アルゴリズム:** GNN (GraphSAGE, Linformer)。
+* **テクニック:** 特徴量エンジニアリング (protobufからの追加特徴、入力形状特徴、次元mod特徴)。RWPE位置エンコーディング。**グラフプルーニング/マージ** (設定ノード/近傍以外を削除またはマージ)。仮想出力ノード追加。Pairwise Hinge Loss。データセット別モデル。
 
-**4位**
+**[4位](https://www.kaggle.com/competitions/predict-ai-model-runtime/discussion/456462)**
 
-- **アプローチ:** グラフ構造情報を限定的に利用するシンプルなMLP。特定の特徴量インデックスを選択。
-- **アーキテクチャ:** MLP (Embedding -> Sequential(Linear+ReLU) x2 -> MatMul -> Sequential(Linear+ReLU) x2)。
-- **アルゴリズム:** 記載なし（損失関数等不明）。
-- **テクニック:**
-    - **特徴量選択:** node_featから12次元、node_config_featから8次元を選択。
-    - **モデル:** Opcodeを埋め込み。ノード特徴とOpcode埋め込みを結合してMLP処理 (node_dense)。設定特徴と全ノード特徴（繰り返し）を結合してMLP処理 (config_dense)。両者の行列積と設定特徴の平均を結合して最終MLP (output)。
+* **アプローチ:** シンプルなMLP。グラフ構造を陽に扱わない。
+* **アーキテクチャ:** MLP。ノード特徴用MLP、設定特徴用MLP、両者の相互作用項 + 設定平均特徴を入力とする最終MLP。
+* **アルゴリズム:** MLP。
+* **テクニック:** 特定の特徴量インデックスのみ使用。グラフ構造はエッジ情報を介してノード特徴に集約。ターゲットはランクパーセンタイル。カスタムデータローダー。
 
-**5位**
+**[5位](https://www.kaggle.com/competitions/predict-ai-model-runtime/discussion/456093)**
 
-- **アプローチ:** GraphSageベースのGNN。次元不変性を考慮したTransformerベースの特徴量埋め込み。双方向畳み込み。
-- **アーキテクチャ:** GraphSage（3層、双方向畳み込み）、Transformer Encoder（次元特徴量埋め込み用）。
-- **アルゴリズム:** GraphSage、PairwiseHingeLoss（グラフ内ペア＋バッチ内全ペア）、AdamW、Cosine Annealing Scheduler、DropEdge。
-- **テクニック:**
-    - **特徴量:** 次元特徴量（6次元x30特徴）をTransformerで埋め込み（トークン和で次元削減）。ユニークな特徴ベクトルのみ計算しコピーして効率化。Opcode埋め込み工夫（単項演算子を共通化）。設定可能ノードの特徴量をコンフィグ特徴量で上書き。入力特徴量に対数変換適用。
-    - **学習:** グラフ全体を入力。オーバーサンプリング。Layoutデータのメモリマップモード読み込み。
-    - **モデル:** Tileデータセットのみで学習したモデルと、Layout(+Tile)データセットで学習したモデル。
-    - **アンサンブル:** Naiveモデル（特徴量Flatten）とTransformer埋め込みモデルのアンサンブル。
+* **アプローチ:** GraphSageベースGNN + Transformerによる次元特徴埋め込み。
+* **アーキテクチャ:** 3層 GraphSage (双方向畳み込み)。**Transformerによる次元特徴埋め込み**レイヤー。
+* **アルゴリズム:** GNN (GraphSAGE), Transformer。
+* **テクニック:** **次元特徴埋め込み**: (6次元x30特徴量)をTransformerで(6トークンx30次元)として扱い、集約して単一ベクトルに。Pairwise Hinge Loss (グラフ内ペア + バッチ内ペア)。Whole Graph入力。Opcode Embedding共有。DropEdge。Log変換。オーバーサンプリング。Numpy mmapによるRAM節約。
 
-**6位**
+**[6位](https://www.kaggle.com/competitions/predict-ai-model-runtime/discussion/456084)**
 
-- **アプローチ:** 設定関連ノードの5ホップ近傍の部分グラフを使用するGNN（SageConvまたはGATConv）。グラフインスタンス正規化とランキング損失を利用。
-- **アーキテクチャ:** SageConv（4層、Residual接続）またはGATConv（4層）。
-- **アルゴリズム:** SageConv、GATConv、Pairwise Ranking Loss（Layout）、ListMLE（Tile）、Graph Instance Normalization（ノード単位）。
-- **テクニック:**
-    - **データ準備:** 5ホップ近傍の部分グラフを使用。
-    - **学習:** 勾配蓄積（サブグラフ単位）。
-    - **正規化:** Graph Instance Normalization（ノード単位）。
+* **アプローチ:** GraphSage/GIN/GATベースGNN。5ホップ近傍サブグラフ。
+* **アーキテクチャ:** 4層 SAGEConv + Residual または 4層 GINConv (Layout)。4層 GATConv (Tile)。
+* **アルゴリズム:** GNN (GraphSAGE, GIN, GAT)。
+* **テクニック:** **5ホップ近傍サブグラフ**抽出。**Graph Instance Norm**。勾配累積。Pairwise Ranking Loss (Layout)、ListMLE (Tile)。
 
-**7位**
+**[7位](https://www.kaggle.com/competitions/predict-ai-model-runtime/discussion/456673)**
 
-- **アプローチ:** GraphSAGE Transformer (GST) ベースのGNN。コンフィグサンプリングによるメモリ/時間削減。複数モデルのアンサンブル。
-- **アーキテクチャ:** GSTベースのGNN。
-- **アルゴリズム:** 記載なし（損失関数等不明）。
-- **テクニック:**
-    - **データ準備:** 各グラフから500または1000コンフィグをサンプリング。
-    - **学習戦略:** 全体で学習するモデル、グラフの形状（エッジ数、ノード数）に基づき分割して学習するモデル、パラメータ（グラフ畳み込みタイプ、LR、バッチサイズ、層数、隠れ層サイズ）を変えたモデルを学習。
-    - **アンサンブル:** 上記複数モデルのアンサンブル。
+* **アプローチ:** GST (Graph Substructure Transformer) ベースGNN。設定サンプリング。
+* **アーキテクチャ:** GSTベース (公開実装参照)。
+* **アルゴリズム:** GNN (Transformerベース？)。
+* **テクニック:** 設定サンプリング (各グラフから500-1000)。モデルタイプごとの学習。異なるGNN層(Graph Conv, GAT, Transformer)やハイパーパラメータでの複数モデルアンサンブル。
 
-**8位**
+**[8位](https://www.kaggle.com/competitions/predict-ai-model-runtime/discussion/456645)**
 
-- **アプローチ:** LightGBMを用いたシンプルな表形式データアプローチ。テストデータごとに最も類似した訓練データ（モデルタイプが同じと推測されるグラフ）を見つけて利用。
-- **アーキテクチャ:** LightGBM。
-- **アルゴリズム:** CrossEntropy損失（ターゲットをMinMaxScaler変換後）。
-- **テクニック:**
-    - **特徴量エンジニアリング:** Tile: 統計量（カウント、mean, max, std, last）。Layout: node_config_featをFlattenし、一意値列・重複列を削除。
-    - **データ選択:** 各テストデータに対し、エッジ数・ノード数がほぼ同じ訓練データを特定し、そのデータのみで学習。
-    - **学習:** ターゲットをMinMaxScalerで[0,1]に変換し、CrossEntropy損失で学習。固定ラウンド数で学習（検証データ不使用）。
+* **アプローチ:** LightGBM。テストデータに類似した訓練データのみを使用。
+* **アーキテクチャ:** LightGBM。
+* **アルゴリズム:** GBDT。
+* **テクニック:** Layout: ノード/エッジ数に基づき、テストデータごとに**最も類似した訓練グラフを特定**し、そのデータのみで学習。Tile: 特徴量エンジニアリング (集約特徴量)。ターゲットをMinMaxScalerで変換。損失関数はXEntropy。Validationなし、固定ラウンド学習。
 
-**9位**
+**[9位](https://www.kaggle.com/competitions/predict-ai-model-runtime/discussion/456206)**
 
-- **アプローチ:** GSTベースのGNN。グラフ圧縮（Dijkstraアルゴリズム利用）と特徴量の対数変換が特徴。データセット/モデルタイプ別の学習とアンサンブル。
-- **アーキテクチャ:** GSTベース (SageConv)、TransformerConv、GATConvも試行。
-- **アルゴリズム:** Dijkstraアルゴリズム（グラフ圧縮用）、PairwiseHingeLoss。
-- **テクニック:**
-    - **グラフ圧縮:** Dijkstraアルゴリズムを使用し、特定ノード(s)から設定関連ノード(node_config_ids)への最短経路上のノード・エッジのみを抽出してグラフを圧縮。
-    - **前処理:** ノード特徴量に対数変換適用。
-    - **学習:** 各グラフから512コンフィグをサンプリング。4つのデータタイプ（xla-random, xla-default, nlp-random, nlp-default）で別々にモデルを学習。さらに、グラフIDやノード数から推定されるモデルアーキテクチャ（ResNet, EfficientNet, BERTなど）ごとに特化したモデルも学習。
-    - **アンサンブル:** 複数アーキテクチャ、複数データセットで学習したモデルをアンサンブル。
+* **アプローチ:** GSTベースGNN。**Dijkstra法によるグラフ圧縮**。
+* **アーキテクチャ:** GSTベース (公開実装参照)。TransformerConv, GATConvも試行。
+* **アルゴリズム:** GNN (Transformerベース？)。
+* **テクニック:** **グラフ圧縮**: Dijkstra法で最大インデックスノードから設定ノードへの最短パス上のノード・エッジを抽出。Log変換入力特徴量。Pairwise Hinge Loss。データセット別/モデルアーキテクチャ別モデル学習。アンサンブル。
 
-**10位**
+**[10位](https://www.kaggle.com/competitions/predict-ai-model-runtime/discussion/456129)**
 
-- **アプローチ:** Graph Transformerベース。コンフィグ情報を中間層で融合（Intermediate Fusion）。Linear Attentionで計算量を削減。
-- **アーキテクチャ:** Graph Transformer (Local Graph Block (APPNPなど) + Global Self-Attention (Linear Attention) + Cross-Attention)。
-- **アルゴリズム:** Multi-head Linear Attention、APPNP (Graph Module)、ListMLE損失、AdamW、Cosine Annealing。
-- **テクニック:**
-    - **特徴量:** 入力特徴量に対数変換適用（log(x+3)）。
-    - **コンフィグ融合:** 中間層でノード表現とコンフィグ情報を融合（Cross-Attention）。
-    - **Attention:** 計算量削減のためLinear Attentionを使用。活性化関数はELU+1。
-    - **モデル:** TransformerのMLP部分をグラフネットワーク（APPNPなど）に置き換え局所的混合を導入。Tile/Layout、XLA/NLPで別モデル構築。
-    - **学習:** 各バッチで多数（～1000）のコンフィグを使用。Layoutデータは設定情報のみオンデマンドでロード。
-    - **アンサンブル:** 多数（10-20）の異なる設定のモデルを混合。
-
+* **アプローチ:** Graph Transformer。**中間層での設定情報融合 (Intermediate Fusion)**。
+* **アーキテクチャ:** Graph Transformer (局所: APPNP/SAGE/GAT/GPRGNN、大域: Linear Attention/Self-Attention)。
+* **アルゴリズム:** GNN (Transformerベース)。
+* **テクニック:** **Intermediate Fusion**: GNN層の後、ノード表現に設定情報を結合し、さらに層を重ねる。Log変換入力特徴量。ListMLE Loss。データセット別モデル。XLA/NLP分割学習。

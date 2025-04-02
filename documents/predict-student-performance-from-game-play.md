@@ -1,6 +1,8 @@
 ---
 tags:
   - Kaggle
+  - 教育
+  - MacroF1Score
 startdate: 2023-02-07
 enddate: 2023-06-29
 ---
@@ -9,203 +11,197 @@ enddate: 2023-06-29
 
 **概要 (Overview)**
 
-* **目的:** このコンペティションの目的は、子供たちがプレイする教育ゲーム「Jo Wilder and the Capitol Case」の**イベントログデータ**（クリック、移動、会話などの記録）を分析し、ゲーム内の特定の**問題（質問）に正解できるかどうかを予測する**ことです。
-* **背景:** ゲームベース学習は、学習者のエンゲージメントを高め、効果的な学習体験を提供する可能性があります。しかし、ゲームプレイ中のどの行動が学習成果に結びついているのかを理解することは困難です。このコンペでは、詳細なプレイログデータを用いて、生徒の学習状況（特定の問題を解ける能力）をリアルタイムに近い形で把握し、個別最適化された学習支援を提供するための基盤技術を開発することを目指しています。
-* **課題:**
-    * **長大なシーケンスデータ:** 各プレイヤーのセッションデータは数千から数万のイベントログで構成され、非常に長大です。
-    * **多様なプレイスタイル:** プレイヤーごとにゲームの進め方やインタラクションのパターンは大きく異なります。
-    * **ノイズと冗長性:** ログデータには、学習に直接関係しない操作や繰り返し行動などが多く含まれます。
-    * **学習状態の潜在性:** プレイヤーの理解度やスキル習得度は、ログデータから間接的に推測する必要があります。
-    * **効率的な推論:** 将来的にリアルタイムでの介入を目指すため、効率的な特徴量計算と推論が求められます。
-    * **データリーク問題:** コンペ期間中に外部公開データとの重複によるデータリークが発覚し、データセットが更新されるという経緯がありました。
+* **目的:** このコンペティションの目的は、教育ゲーム「Jo Wilder and the Capitol Case」のプレイヤーの行動ログデータを用いて、ゲーム内の**評価問題（全18問）に対する正誤を予測する**機械学習モデルを開発することです。
+* **背景:** このゲームは、特に読解スキルを向上させる目的で開発されました。プレイヤーのゲーム内での行動（クリック、移動、テキスト閲覧、オブジェクト操作など）を分析することで、学習の進捗状況や理解度を評価し、より効果的な教育介入につなげることを目指しています。ゲームベースの評価は、従来のテスト形式に代わる、より自然で魅力的な評価方法となる可能性があります。
+* **課題:** 提供されるデータは、各プレイヤー（セッション）ごとの詳細な**時系列イベントログ**です。この大量のログデータから、18個の評価問題の正誤に関連する**有効な特徴量を抽出・設計する**ことが最大の課題となります。データにはセッションごとに長さが大きく異なる、イベントの種類が多い、ノイズが含まれるといった特徴があります。また、コンペ期間中に**データ漏洩の問題**が発覚し、データセットが更新されるという出来事もありました。
 
 **データセットの形式 (Dataset Format)**
 
-提供される主なデータは、プレイヤーごとのゲームプレイログと、各問題への正解ラベルです。
+提供される主なデータは、ゲームのプレイログと正解ラベルです。
 
-1.  **イベントログデータ (`train.csv`, `test.csv`):**
-    * 各行がプレイヤーの1つのアクション（イベント）に対応する時系列データ。
-    * `session_id`: 各プレイセッション（プレイヤーごと）のユニークID。
-    * `index`: セッション内でのイベントの順序を示すインデックス。
-    * `elapsed_time`: セッション開始からの経過時間（ミリ秒）。
-    * `event_name`: イベントの種類（例: `Maps_click`, `person_click`, `cutscene_click`, `observation_click`, `notification_click`, `object_click`, `map_hover`, `notebook_click`, `map_click`, `checkpoint` など）。
-    * `name`: イベントの具体的な内容（例: `basic`, `undefined`, `close`, `open`, `prev`, `next` など）。
-    * `level`: ゲーム内のレベル (0-22)。
-    * `page`: ノートブックのページ番号 (NaNあり)。
-    * `room_coor_x`, `room_coor_y`: 部屋座標 (NaNあり)。
-    * `screen_coor_x`, `screen_coor_y`: 画面座標 (NaNあり)。
-    * `hover_duration`: ホバーイベントの継続時間 (NaNあり)。
-    * `text`: 表示されたテキスト内容 (NaNあり)。
-    * `fqid`: ゲーム内のオブジェクトやキャラクターなどのユニークID (NaNあり)。
-    * `room_fqid`: 部屋のユニークID。
-    * `text_fqid`: 表示されたテキストに対応するユニークID (NaNあり)。
-    * **これら多数の列から効果的な特徴量を抽出することが重要です。**
-2.  **正解ラベルデータ (`train_labels.csv`):**
-    * **ターゲット変数**を提供します。
-    * `session_id`: セッションID。
-    * `level_group`: 問題が出題されるレベルの範囲 (`0-4`, `5-12`, `13-22`)。
-    * `q`: 問題番号 (1から18)。
-    * `correct`: その問題に正解したかどうか (1: 正解, 0: 不正解)。
-    * `session_level` (非公式): `session_id` と `level_group`, `q` を組み合わせたユニークIDとしてしばしば使われます。
+1.  **トレーニングデータ:**
+    * `train.csv`: 各プレイヤー（`session_id`）のゲームプレイ中のイベントログ。
+        * `session_id`: プレイヤー（セッション）を一意に識別するID。
+        * `index`: セッション内のイベント発生順序（0から始まる）。
+        * `elapsed_time`: セッション開始からの経過時間（ミリ秒）。
+        * `event_name`: イベントの種類（例: `Maps_click`, `person_click`, `cutscene_click`）。
+        * `name`: イベントの詳細（例: `basic`, `undefined`, `close`）。
+        * `level`: ゲーム内のレベル（0〜22）。
+        * `page`: ノートブックのページ番号（NaNの場合あり）。
+        * `room_coor_x`, `room_coor_y`: 部屋の中での座標（NaNの場合あり）。
+        * `screen_coor_x`, `screen_coor_y`: 画面上の座標（NaNの場合あり）。
+        * `hover_duration`: ホバー時間（NaNの場合あり）。
+        * `fqid`: 操作対象の完全修飾ID（Full Qualified ID）（例: `door`, `notebook`, `trophy`）。
+        * `room_fqid`: 現在いる部屋の完全修飾ID（例: `tostacks`, `tobasement`）。
+        * `text_fqid`: 表示されたテキストの完全修飾ID（例: `tunic.historicalsociety.closet_dirty.trigger_scarf`）。
+        * `text`: 表示されたテキスト内容（NaNの場合あり）。
+        * `level_group`: 質問が出題されるレベルのグループ（`0-4`, `5-12`, `13-22`）。
+    * `train_labels.csv`: トレーニングデータの各セッションにおける、18個の質問に対する正解ラベル。
+        * `session_id`: セッションIDと質問番号（q1〜q18）を組み合わせたもの（例: `2009031243127320_q1`）。
+        * `correct`: その質問に正解したかどうか（1: 正解, 0: 不正解）。
+2.  **テストデータ:**
+    * コンペ期間中は、隠されたテストセットに対して予測を行うための**API**が提供されました。参加者は、APIから逐次送られてくるセッションのログデータを受け取り、18個の質問に対する正解確率を予測して返す必要がありました。
+    * ログデータの形式は`train.csv`と同様です。
 3.  **外部データ:**
-    * Field Day Lab の Open Game Data Portal ([https://fielddaylab.wisc.edu/opengamedata/](https://fielddaylab.wisc.edu/opengamedata/)) から、より多くのゲームプレイログデータが入手可能でした。多くのトップチームがこのデータを活用しました。
-4.  **`sample_submission.csv`:**
-    * 提出フォーマットのサンプル。`session_level` (例: `20090312431273200_q1`) と `correct` (予測された正解確率) の列を持ちます。
+    * Field Day LabのOpen Game Data Portal ([https://fielddaylab.wisc.edu/opengamedata/](https://fielddaylab.wisc.edu/opengamedata/)) から、追加のゲームプレイログデータが利用可能でした。多くの参加者がこのデータを利用してモデルの性能を向上させました。
+4.  **`sample_submission.csv`**:
+    * 提出フォーマットのサンプル。`session_id`（例: `2009031243127320_q1`）と`correct`（予測確率）の列を持ちます。
 
 **評価指標 (Evaluation Metric)**
 
-* **指標:** **平均 F1 スコア (Average F1 Score)**
+* **指標:** **Macro F1 Score**
 * **計算方法:**
-    1.  各問題（q1からq18まで）について、予測された正解確率に閾値（例: 0.5）を適用して二値分類（正解/不正解）を行います。
-    2.  各問題ごとに F1 スコアを計算します。
-        F1 = 2 * (Precision * Recall) / (Precision + Recall)
-    3.  全18問の F1 スコアを平均して最終スコアとします。
-* **意味:** 各問題に対する正解・不正解の分類性能を、適合率（Precision）と再現率（Recall）の調和平均で評価し、それを全体で平均したものです。クラス不均衡（一般的に正解の方が多い）がある場合でも、両方のクラスの予測性能をバランス良く評価します。スコアは **0から1** の範囲を取り、**1に近い**ほど性能が良いことを示します。最適な閾値を見つけることもスコア向上に繋がります。
-
-要約すると、このコンペティションは、教育ゲームの詳細なイベントログ時系列データから、プレイヤーが各問題に正解するかどうかを予測する二値分類タスクです。データはイベントシーケンスとそのメタデータ、正解ラベルで構成され、性能は全問題の平均F1スコア（高いほど良い）によって評価されます。
+    1.  18個の各質問（q1〜q18）について、予測確率をある閾値（例: 0.5）で0か1に変換し、それぞれのF1スコアを計算します。
+        * Precision = TP / (TP + FP)
+        * Recall = TP / (TP + FN)
+        * F1 = 2 * (Precision * Recall) / (Precision + Recall) （TP: 真陽性、FP: 偽陽性、FN: 偽陰性）
+    2.  18個の質問のF1スコアの単純平均を計算します。
+        * Macro F1 = (F1\_q1 + F1\_q2 + ... + F1\_q18) / 18
+* **意味:** モデルが各質問に対してどれだけバランス良く正解・不正解を予測できているかを評価します。各質問の重要度を均等に扱い、全体の予測性能を示します。スコアは**高い**ほど良い評価となります。閾値の選択がスコアに影響を与える可能性があります。
 
 ---
 
 **全体的な傾向**
 
-このコンペティションでは、生徒のゲームプレイログという長大な時系列データから、各問題の正答を予測する必要がありました。上位解法の多くは、**勾配ブースティング木 (GBDT)**、特に **XGBoost**, **CatBoost**, **LightGBM** を中心に構築されました。これは、テーブル形式の特徴量エンジニアリングが効果的であったことを示唆しています。一部では、**ニューラルネットワーク (NN)**、特に **Transformer** や **1D CNN**、**LSTM/GRU** を活用するアプローチも成功を収め、最終的にはGBDTとNNの**アンサンブル**が多くのチームで採用されました。
+このコンペティションは、教育ゲームのログデータから生徒の成績を予測するもので、本質的には**時系列データを用いた多ラベル分類（または18個の二値分類）タスク**と捉えることができます。上位解法の多くは、**勾配ブースティング木（GBDT: XGBoost, LightGBM, CatBoost）** と**ニューラルネットワーク（NN: Transformer, Conv1D, LSTM/GRU）** の**アンサンブル**に基づいていました。
 
-**特徴量エンジニアリング**が極めて重要であり、勝敗を分ける最大の要因となりました。特に効果的だったのは以下の種類のようです。
-* **時間ベースの特徴量:**
-    * イベント間の経過時間 (`elapsed_time_diff`) の集計（合計、平均、標準偏差、最大、最小など）。
-    * 特定のイベント（例: `checkpoint`, `notification_click`）間の所要時間やイベント数。
-    * レベルグループごとの総プレイ時間、各レベルでの滞在時間。
-    * ホバー時間 (`hover_duration`) の集計。
-* **カウントベースの特徴量:**
-    * イベントタイプ (`event_name`, `name`) やオブジェクトID (`fqid`, `room_fqid`, `text_fqid`) の出現回数。
-    * 特定のキー（複数列の組み合わせ）でのイベント回数。
-    * ユニークなIDの数。
-* **シーケンス/順序ベースの特徴量:**
-    * イベントインデックス (`index`) の差分集計。
-    * 特定イベントの最初/最後のインデックス。
-    * 前後のイベントとの関係性を示す特徴量。
-* **座標ベースの特徴量:**
-    * 部屋 (`room_coor`) や画面 (`screen_coor`) の座標移動距離の集計（効果は限定的との報告もあり）。
-* **メタ特徴量:**
-    * 前のレベルグループの予測確率を現在のレベルグループの特徴量として利用。
-    * 各セッションの最大到達レベル。
+**特徴量エンジニアリング**が勝敗を分ける最も重要な要素であり、多くのチームが膨大な時間を費やしました。特に**時間に関する特徴量**（イベント間の経過時間 `elapsed_time_diff`、ホバー時間 `hover_duration`、特定のタスクにかかった時間など）や、**イベントの発生回数**（特定のイベント `event_name` や `fqid` のカウント、特定のエリア `room_fqid` での行動回数など）が重要視されました。ゲームのドメイン知識（どのイベントが重要か、どのシーケンスが学習状況を示すかなど）を活用した特徴量や、座標情報（移動距離など）、テキスト情報、さらには過去の質問の予測確率なども有効な特徴量として利用されました。
 
-**外部データの活用**も多くのチームで行われ、Field Day Lab の Open Game Data Portal から取得した追加のセッションデータがモデル性能向上に寄与しました。
+データセットに関しては、主催者から提供されたデータに加え、**公開されている外部データ**を活用することが一般的でした。データの前処理（欠損値処理、ログのソート順（`index` vs `elapsed_time`））や、信頼性の高い**交差検証（CV）戦略**（GroupKFoldなど）の構築も重要でした。特にコンペ途中でデータ漏洩の問題とデータ更新があったため、LB（リーダーボード）スコアだけでなく、安定したCVスコアに基づいてモデルや特徴量を選択するアプローチが求められました。
 
-**モデル構築戦略**として、以下の点が特徴的でした。
-* **Level Group別 vs 全体 vs 問題別:** 予測モデルをレベルグループごと (0-4, 5-12, 13-22) に構築するか、全18問を1つのモデルで予測するか（問題番号を特徴量とする）、あるいは18問それぞれにモデルを構築するか、様々なアプローチが試されました。アンサンブルのために複数の戦略を組み合わせることもありました。
-* **NNアーキテクチャ:** NNでは、Transformer Encoderやカスタム1D CNN（WaveNet風）、LSTM/GRUなどが試されました。時間情報を効果的に埋め込むためのカスタムEmbedding層 (TimeEmbedding) も開発されました。
-* **2段階学習/スタッキング:** NNの埋め込み層を事前学習したり、GBDTとNNの予測値をメタ特徴量としてロジスティック回帰やMLPで最終予測を行うスタッキングも有効でした。
+モデリング戦略としては、18個の質問それぞれにモデルを構築するアプローチ、レベルグループ（`0-4`, `5-12`, `13-22`）ごとにモデルを構築するアプローチ、全質問を単一モデルで予測するアプローチなど、多様な方法が試されました。
 
-**効率化**も重要なテーマであり、特徴量計算に `polars` や `numba`、GBDT推論に `lleaves` や `Treelite`、NN推論に `TensorFlow Lite (TF Lite)` などが活用されました。
+推論フェーズでは、APIの仕様に合わせた効率的な処理が求められ、**Polars**や**Numba**といった高速化ライブラリの活用や、NNモデルの軽量化（**TF Lite**）、GBDTモデルの高速化（**Treelite**, **lleaves**）なども見られました。最終的な予測ラベルを決定するための**閾値最適化**もスコア向上に貢献しました。
 
-**CV戦略**としては、`session_id` に基づく `GroupKFold` が一般的でした。データリーク問題があったため、信頼できるCVの構築と、Public LBに過度に依存しないモデル選択が重要でした。最終的な**閾値**の選択（全体で1つ vs 問題ごとに設定）もスコアに影響を与えました。
+---
 
 **各解法の詳細**
 
 **[1位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420217)**
 
-* **アプローチ:** XGBoost + NN (カスタムConv1D) の50/50アンサンブル。外部データ活用。堅牢なCVと効率性重視。
-* **アーキテクチャ:** XGBoost。NN: カスタムTimeEmbedding + カテゴリEmbedding -> WaveNet風Conv1Dバックボーン -> MLP/Skip接続Head。
-* **アルゴリズム:** XGBoost: (デフォルト損失)。NN: BCE Loss。(Optimizer/Scheduler不明)。
+* **アプローチ:** XGBoostとNN（カスタムTimeEmbedding + Conv1Dベース）のアンサンブル。時間（duration）特徴量を重視。
+* **アーキテクチャ:**
+    * GBDT: XGBoost。
+    * NN: カスタムTimeEmbedding（Conv1Dベース）で時間情報をエンコードし、カテゴリカル特徴量（`text_fqid`, `room_fqid`, `fqid`, `event_name`+`name`）のEmbeddingと結合。WaveNetや時間認識イベントの論文に触発された構造。トレーニングは2段階（バックボーン事前学習＋全体ファインチューニング）。
+* **アルゴリズム:**
+    * GBDT: XGBoost。
+    * NN: BCE Loss。AdamW。
+    * アンサンブル: GBDTとNNの単純平均（50/50）。
 * **テクニック:**
-    * **特徴量 (GBDT):** 時間とカウントの集計が主。座標情報は限定的。全履歴を使用。
-    * **特徴量 (NN):** 5特徴量 (duration, text_fqid, room_fqid, fqid, event_name+name)。時間特徴量をカスタムConv1Dで埋め込み。
-    * **学習:** NNは2段階 (バックボーン事前学習 -> 全体End-to-End)。ソート順 (元/インデックス) で複数モデル学習。
-    * **CV:** 10 bags x 5 folds (GBDT)、Consensus (NN)。ノイズレベル以上の改善のみ採用。
-    * **効率化:** TF Lite (NN)、Treelite (XGBoost)。
-    * **アンサンブル:** 複数Fold/Seed/ソート順のモデルを平均。閾値0.625。
+    * **データ:** Field Day Labの公開データを活用し、ほぼ完全なトレーニングデータを再構築。セッション完了データのみ使用（約37kセッション）。データ漏洩を発見し報告。
+    * **特徴量 (GBDT):** 時間（duration）とカウントが中心。レベル、部屋、テキスト閲覧、イベントタイプごとの集約。過去の全イベントを使用。座標情報は限定的に利用。
+    * **特徴量 (NN):** duration, text\_fqid, room\_fqid, fqid, event\_name+name の5つ。DurationはカスタムTimeEmbeddingで処理。Time-aware events: `duration * (event_1 + event_2 + ...)` の形で時間とイベントを結合。
+    * **検証:** 厳密なCV戦略。GBDTは10Bag x 5Foldの平均でノイズ以上の改善のみ採用。NNは1Bag x 5Foldで3〜4Fold改善で採用。
+    * **学習:** NNはバックボーン（レベルグループごと）を事前学習し、その後全体をEnd-to-Endで学習（バックボーンはフリーズ）。
+    * **推論:** APIシミュレータを構築。NNモデルはTF Liteで高速化。単一閾値（0.625）を使用。多数のモデル（2x4x10 fold GBDT + 3x4x5 fold NN）をアンサンブル。
 
-**[2位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420329)**
+**[2位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/424329)**
 
-* **アプローチ:** 単一LightGBMモデル。時間ベースの特徴量を重視。効率化に注力。
+* **アプローチ:** 単一のLightGBMモデル。全質問を一つのモデルで予測。効率性（推論速度）を重視。
 * **アーキテクチャ:** LightGBM。
-* **アルゴリズム:** LightGBM (デフォルト損失)。
+* **アルゴリズム:** LightGBM。
 * **テクニック:**
-    * **特徴量:** **時間関連**が多数（タスク完了時間、レポート閲覧時間など）。基本特徴（問題番号、イベント数）も重要。1296特徴量。
-    * **学習:** 全データで単一モデルを学習 (CVは5 Foldで実施)。
-    * **効率化:** 特徴量生成コードにnumbaとC言語を多用。推論時間の大部分はLGBM予測。
-    * **閾値:** 0.63。
+    * **データ:** 全データで最終モデルをトレーニング（CVは開発中のみ使用）。
+    * **特徴量:** 時間ベースの特徴量が重要。特にレベル1でレポートを閲覧した時間（`LG0_L1_first_report_open_duration`）が効果的。特徴量は1296個。
+    * **効率化:** 特徴量生成コードにNumbaとC言語を多用し高速化。推論時間の大部分はLightGBMの予測ステージが占めるように最適化。
+    * **推論:** 単一閾値（0.63）を使用。
 
 **[3位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420235)**
 
-* **アプローチ:** GBDT (XGBoost, CatBoost) + NN (Transformer+LSTM) のアンサンブル。外部データ活用。多様なモデリング戦略。
-* **アーキテクチャ:** XGBoost, CatBoost。NN: GRU/LSTM -> Transformer Encoder (Conformer風/標準) -> BiLSTM+LSTM Head。
-* **アルゴリズム:** GBDT: (デフォルト)。NN: BCE Loss。Multi-task学習 (他問題も補助出力)。
+* **アプローチ:** GBDT（CatBoost, XGBoost）とNN（Transformer+LSTM）のアンサンブル。複数のモデリング戦略（質問ごと、レベルグループごと、全質問一括）を組み合わせ。
+* **アーキテクチャ:**
+    * GBDT: CatBoost, XGBoost。
+    * NN: Transformer（Conformerライク、Last Query Attentionなど3種） + BiLSTM + LSTM。Poolingはsum, std, max, lastをconcat。
+* **アルゴリズム:**
+    * GBDT: CatBoost, XGBoost。
+    * NN: Multi-label BCE Loss。
+    * アンサンブル: GBDTとNNのOOF予測をロジスティック回帰でスタッキング後、重み付き平均（GBT:NN = 6:4）。
 * **テクニック:**
-    * **モデリング戦略:** Question別GBDT、Level Group別GBDT、全体GBDT、Level Group別NN、全体NNを構築。
-    * **特徴量 (GBDT):** 時間/インデックス差分集計、座標移動距離、特定イベント間時間/インデックス ("Flag events", "Checkpoint", 回答時間)、"不要な操作"検出、タスク所要時間。
-    * **特徴選択:** Null Importance + gp_minimize。
-    * **特徴量 (NN):** 時間差分 (log1p)、カテゴリ特徴 (event_comb, room_fqid, page, text_fqid, level)。
-    * **ソート順:** GBDTはインデックス順/時間順の両方を試行。
-    * **スタッキング:** GBDT群とNN群のoof予測を別々にLogistic Regressionでアンサンブルし、最終的に6:4で重み付け平均。
+    * **データ:** Field Day Labの生データから追加データセット（11kセッション）を生成し活用（特にNNで効果あり）。
+    * **モデリング戦略:** GBDTではレベルグループごと（2b）や全質問一括（3b）、NNではMulti-label（2a, 3a）を採用。
+    * **特徴量 (GBDT):** レベルグループ間の経過時間、フラグイベント間の時間/indexカウント、過去の質問の予測確率、座標（部屋/スクリーン距離）、特定タスクの時間（例: ノート発見時間）、不要な行動（経験者判定用）の時間/回数など。
+    * **特徴量 (NN):** `elapsed_time_diff` (log1p), `event_comb`, `room_fqid`, `page`, `text_fqid`, `level`。
+    * **検証:** GroupKFold (session\_id)。追加データは検証セットに含めず。
+    * **特徴量選択 (GBDT):** Null Importancesに基づきCatBoostで実施後、`gp_minimize`で最適な特徴量数を探索。
+    * **学習 (NN):** レベルグループごと、または全レベルグループ共通で学習。追加データ使用。
+    * **推論:** 閾値は共通。
 
 **[4位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420349)**
 
-* **アプローチ:** Transformer + XGBoost + CatBoost のアンサンブル。外部データ活用。
-* **アーキテクチャ:** 軽量Transformer (1層)。XGBoost。CatBoost。Linear Regression (スタッキング用)。
-* **アルゴリズム:** Transformer: (損失不明)。XGBoost/CatBoost: (デフォルト)。Linear Regression。
+* **アプローチ:** Transformer、XGBoost、CatBoostのアンサンブル。各モデル3シードx5Fold。線形回帰のメタモデルで最終予測。
+* **アーキテクチャ:**
+    * NN: 軽量TransformerEncoder (1層, 64次元)。連続値とカテゴリ値（インデックス）を入力。全質問共通モデル。
+    * GBDT: XGBoost, CatBoost。レベルグループごとにモデル構築（質問番号を入力特徴量に）。
+    * メタモデル: 線形回帰（各質問ごと）。
+* **アルゴリズム:**
+    * NN: BCE Loss (multi-label)。
+    * GBDT: XGBoost, CatBoost。
+    * アンサンブル: 線形回帰。
 * **テクニック:**
-    * **データ前処理:** インデックス順ソート。ホバーイベント除去。Transformer入力用にイベント種類削減 (0.999以上出現するイベントを除去、max_len=452)。
-    * **特徴量 (Transformer):** 6特徴量 (時間差分, インデックス差分, 座標距離差分, 部屋XY, カテゴリ埋め込み)。シーケンス長256にクロップ。
-    * **特徴量 (GBDT):** Transformer入力特徴量をフラット化 + 基本的な集計特徴量。
-    * **モデリング戦略:** Level Groupごとにモデル構築（問題番号を特徴量として入力）。
-    * **スタッキング:** 各モデルの予測確率をメタ特徴量とし、問題ごとにLinear Regressionで最終予測。過去と未来の予測確率も入力。
-    * **アンサンブル:** 3モデル x 3シードの平均を入力としてスタッキング。
+    * **データ:** Field Day Labの生データの大部分（約58kセッション）を学習に使用。検証はKaggleデータのみ。前処理として`hover`行を削除。
+    * **特徴量 (NN):** ゲーム内の特定ポイント（`event_name`等を結合して一意化）を定義し、頻出ポイントを除外。ポイント間の時間差、index差、移動距離差、座標、カテゴリ（ポイントID）を使用。
+    * **特徴量 (GBDT):** NNの入力特徴量（数値5列）を平坦化してそのまま使用。その他、公開カーネルにあるようなカテゴリごとの統計量（時間差のmean, maxなど）。
+    * **検証:** 5Fold CV。
+    * **アンサンブル:** 各ベースモデル（Transformer, XGBoost, CatBoost）の3シードx5FoldのOOF予測確率を線形回帰メタモデルへの入力とする。メタモデルは過去と未来の質問の予測確率も入力に使用（例: q7予測にq1-13の予測確率を使用）。
+    * **推論:** 閾値の影響が大きいことを認識し、最終提出ではCV最適閾値（0.62）とLB最適閾値（0.60）、および0.64の3つを提出。
 
 **[7位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420119)**
 
-* **アプローチ:** 単一LightGBMモデル (Level Group別)。時間差分特徴量中心。効率化。
+* **アプローチ:** LightGBMモデルをレベルグループごとに3つ構築。効率性（推論速度）を重視し、効率性トラックで1位獲得。
 * **アーキテクチャ:** LightGBM。
-* **アルゴリズム:** LightGBM (デフォルト)。
+* **アルゴリズム:** LightGBM。
 * **テクニック:**
-    * **特徴量:** **時間差分集計**が主。集計キーは6変数 (level, name, event_name, room_fqid, fqid, text) の組み合わせ。各キーの出現回数も使用。'notification_click'イベント間時間も重要。
-    * **特徴選択:** レアなキー組み合わせを除外後、Gain Importanceに基づきTop 500-700特徴量を選択して再学習。
-    * **外部データ:** 活用。セッションの最大到達レベルを特徴量に追加。
-    * **ラベル拡張:** 最終Level Groupモデル学習時に、中間Level Groupのラベルも学習データに追加（過学習抑制効果）。
-    * **CV:** 4-Fold CVを3回繰り返し（シード変更）。
-    * **効率化:** 特徴量計算にPythonリスト処理活用。推論にlleavesライブラリ使用。
-    * **閾値:** 0.625。
+    * **データ:** Field Day Labの生データを追加学習に使用（CV+0.002）。セッションごとの最大到達レベルを特徴量に追加。
+    * **特徴量:** 連続するアクション間の時間差（`elapsed_time_diff`）に重点。6つのカテゴリ変数（`level`, `name`, `event_name`, `room_fqid`, `fqid`, `text`）を連結したキーで集約した時間差の合計や出現回数を特徴量に。`notification_click`イベント間の時間差も使用。PandasではなくPythonリスト操作で効率的に計算。
+    * **特徴量選択:** 頻度の低いキーを除外後、学習率大（0.1）で一度学習し、Gain Importanceに基づき500〜700個の特徴量を選択。
+    * **学習:** 選択された特徴量で学習率小（0.02）で再学習。最後のレベルグループの学習時には、2番目のレベルグループのラベル情報をAugmentationとして利用（過学習抑制）。
+    * **検証:** 4Fold CVを3回（異なるシードで）。
+    * **推論:** 単一閾値（0.625）を使用。CVモデルは使わず、全データで再学習したモデルを使用。推論時間約3分。
 
 **[8位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420528)**
 
-* **アプローチ:** XGBoost + Transformer (+GRU/LSTM) のアンサンブル。外部データ活用。
-* **アーキテクチャ:** XGBoost (Question別)。Transformer (+GRU/LSTM, RIIIDコンペ風)。
-* **アルゴリズム:** XGBoost: (デフォルト)。Transformer: (不明)。
+* **アプローチ:** XGBoostとTransformer+GRUのアンサンブル。チーム内で役割分担してモデル開発。
+* **アーキテクチャ:**
+    * GBDT: XGBoost（質問ごとにモデル構築、計90モデル）。
+    * NN: GRU (3層) + TransformerEncoder。RIIIDコンペの解法に触発。
+* **アルゴリズム:**
+    * GBDT: XGBoost。
+    * NN: BCE Loss (multi-task learning)。
+    * アンサンブル: XGBoostとNNの予測をアンサンブル。
 * **テクニック:**
-    * **特徴量 (XGBoost):** セッション長、オブジェクトクリック関連("Instance features")、Bingo特徴量、標準的なカウント/時間集計、インデックスビニング、ホバー集計、Level Group上位特徴量、過去予測確率("Meta features")。
-    * **特徴選択 (XGBoost):** Gain/SHAP Importance、Null Importance。重複/高欠損率特徴量除去。
-    * **特徴量 (NN):** 全特徴量使用。
-    * **学習 (NN):** Multi-task学習 (他問題も補助的に予測)。
-    * **外部データ:** 活用。
-    * **推論順序:** 元のシーケンス順序を保持するように工夫。異常インデックスセッションの再インデックス化。
-    * **アンサンブル:** XGBoostとTransformerモデルをアンサンブル。
+    * **データ:** Field Day Labの公開外部データを活用（CV+0.0005, LB+0.002）。異常なインデックスを持つセッション（約250件）を特定し、並び順を保持/修正する処理を実装。
+    * **特徴量 (GBDT):** セッション長、オブジェクトクリックベースの特徴量（Instance features）、Magic bingo特徴量（公開カーネル参考）、標準的なカウント/集約特徴量（`fqid`, `text_fqid`, `room_fqid`, `level`, `event_comb`）、indexのビニング、`elapsed_time_diff`のfirst/sum、ホバー時間の集約、レベルグループ間のトップ特徴量、過去の質問の予測確率（Meta features, CV+0.001）。
+    * **特徴量 (NN):** `index`, `time_diff`, `room_coor_x/y`, `screen_coor_x/y`, `hover_duration` (数値) と `level`, `event_name`, `name`, `text`, `fqid`, `room_fqid`, `text_fqid` (カテゴリ)。
+    * **特徴量選択 (GBDT):** Gain/SHAPで重要度0のものを削除。重複特徴量、Nullが多い特徴量を除去。
+    * **学習 (NN):** レベルグループごとにモデル構築。過去レベルのシーケンスも入力。Multi-task learning（主目的レベルの質問＋他レベルの質問を補助タスクとして予測、CV+0.002）。NNのEmbeddingを抽出し、集約特徴量と結合してGBDTで再学習するアプローチも試行。
+    * **推論:** 単一閾値。
 
 **[9位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420046)**
 
-* **アプローチ:** LightGBM + CatBoost の平均アンサンブル。Question別モデル。時間ベースの特徴量重視。
+* **アプローチ:** LightGBMとCatBoostのアンサンブル。各質問ごとにモデル構築。CVスコアを重視。
 * **アーキテクチャ:** LightGBM, CatBoost。
-* **アルゴリズム:** LightGBM, CatBoost (デフォルト)。
+* **アルゴリズム:** LightGBM, CatBoost。
+* **アンサンブル:** LightGBMとCatBoostの単純平均。
 * **テクニック:**
-    * **特徴量:** **時間関連**が重要。"Checkpoint"特徴量 (特定イベント間の時間/クリック数)。その他、レベル経過時間、平均座標など。特徴数はLevel Groupごとに増加 (最大18610)。
-    * **CV:** 10-Fold StratifiedKFold (合計正解数で層化)。
-    * **特徴選択:** FoldごとにImportance Top 500を選択し、そのFoldのモデルを再学習。
-    * **メタ特徴量:** 過去の予測確率を使用。
-    * **効率化:** 推論にlleavesライブラリ使用。
-    * **アンサンブル:** LightGBMとCatBoostの単純平均。
+    * **データ:** 外部データは不使用？
+    * **特徴量:** 「ある地点から別の地点までどれだけ時間がかかったか」を重視。チェックポイント特徴量（ほぼ全ユーザーが通過するイベント間の時間/クリック数）を作成。テキストA→B、fqid A→B、部屋A→Bなどのパターンで多数作成。レベルごとの経過時間、平均座標なども使用。特徴量数はレベルグループが上がるにつれて増加（最終的に18k超）。
+    * **検証:** 10-Fold StratifiedKFold（ユーザーの正解数で層化）。
+    * **特徴量選択:** 各Foldで学習したモデルのImportanceに基づき、Top500を選択して再学習（Leakage防止）。
+    * **学習:** 過去の質問の予測確率を特徴量として使用（CV+0.001）。
+    * **推論:** 単一閾値。LightGBMの推論は`lleaves`ライブラリで高速化。
 
 **[10位](https://www.kaggle.com/competitions/predict-student-performance-from-game-play/discussion/420132)**
 
-* **アプローチ:** 複数GBDT (XGBoost, LightGBM) + NN (LSTM+Transformer) -> MLP/ロジスティック回帰でスタッキング -> 平均 + 閾値最適化。
-* **アーキテクチャ:** XGBoost, LightGBM (Level Group別)。NN (LSTM+Transformer)。MLP, Logistic Regression (スタッキング用)。
-* **アルゴリズム:** GBDT/NN: (不明)。MLP/LogReg: (標準的)。
+* **アプローチ:** 複数のXGBoost、LightGBM、NN（LSTM+Transformer）によるStage 1モデルと、それらをスタッキングするStage 2モデル（MLP、ロジスティック回帰）、最後に平均化と閾値最適化を行うStage 3構成。
+* **アーキテクチャ:**
+    * Stage 1: XGBoost (4種), LightGBM (1種), NN (LSTM+Transformer, 1種)。
+    * Stage 2: MLP, Logistic Regression (各質問ごと)。
+* **アルゴリズム:** XGBoost, LightGBM, NN, MLP, Logistic Regression。
+* **アンサンブル:** スタッキング + 平均化。
 * **テクニック:**
-    * **特徴量 (GBDT):** 時間差分とホバー時間の集計、数値特徴量。過去Level Groupの特徴量と予測確率を利用。
-    * **効率化:** 特徴量計算にnumpy+numba。
-    * **CV:** 5-Fold StratifiedGroupKFold。
-    * **スタッキング:** Stage1モデル (NNx1, LGBMx1, XGBx4) のoof予測を入力として、問題ごとにMLPとLogRegを学習。
-    * **アンサンブル:** Stage2の2モデルの予測を平均。
-    * **閾値最適化:** 問題ごとに閾値を最適化 (Powell法)。
-
-
-
+    * **データ:** 外部データは不使用？
+    * **特徴量 (XGBoost):** `elapsed_time_diff`と`hover_duration`の集約特徴量がベース。過去レベルグループの特徴量や予測確率も使用。Numpy/Numbaで特徴量生成を高速化。
+    * **検証:** 5-Fold StratifiedGroupKFold。
+    * **スタッキング:** Stage 1モデルのOOF予測をStage 2モデル（シンプルなMLPとロジスティック回帰）への入力とする。過学習を避けるためシンプルな構造を採用。
+    * **閾値最適化:** Stage 2の予測の平均値に対し、質問ごとに閾値を最適化（`scipy.optimize.minimize`のPowell法を使用）。CV+0.008の大幅改善。
+    * **効率化:** 特徴量生成にNumbaを使用し、Polars使用時（2時間）から13分に短縮。

@@ -1,174 +1,135 @@
 ---
 tags:
   - Kaggle
-  - 教育
 startdate: 2024-09-13
 enddate: 2024-12-13
 ---
 # Eedi - Mining Misconceptions in Mathematics
-https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics
+[https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics](https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics)
 
 **概要 (Overview)**
 
-* **目的:** このコンペティションの目的は、教育プラットフォーム「Eedi」で収集されたデータを用いて、生徒が数学の多肢選択問題を間違えた際に、その**誤りの原因となった根本的な「誤解（Misconception）」**を特定するモデルを開発することです。
-* **背景:** 生徒が単に問題を間違えたという事実だけでなく、なぜ間違えたのか（どのような誤解を持っているのか）を理解することは、個別最適化されたフィードバックを提供し、効果的な学習を支援する上で非常に重要です。Eediは診断的な質問を通じて生徒の理解度を測っており、このコンペティションは、誤答の背後にあるパターンを分析し、教育改善に繋げることを目指しています。
-* **課題:** 同じ問題に対する異なる誤答選択肢は、しばしば異なる特定の数学的な誤解に基づいています。生徒が選んだ誤答から、最も可能性の高い誤解を推定するには、問題の内容と生徒の典型的なエラーパターンを理解する必要があります。参加者は、生徒の回答履歴（どの問題を、どの選択肢で間違えたか）に基づいて、その誤答に対応する誤解の種類を予測することが求められます。これは**多クラス分類問題**として扱われます。
+* **目的:** このコンペティションの目的は、生徒が数学の多肢選択問題 (MCQ) で誤った答えを選んだ際に、その誤答を引き起こした可能性のある**根本的な誤解 (Misconception)** を特定し、関連性の高い順に最大25個推奨するモデルを開発することです。
+* **背景:** Eediは、AIを活用して生徒一人ひとりの学習ニーズに応じた教育を提供するプラットフォームです。生徒がどこでつまずいているのか、なぜ間違えたのか（誤解）を正確に把握することは、効果的な指導やフィードバックのために不可欠です。このタスクを自動化することで、教師の負担を軽減し、より個別化された学習支援を実現することを目指しています。
+* **課題:**
+    * **誤解の特定と推論:** 特定の誤答と、2500以上存在する誤解の中から最も関連性の高いものを結びつける、高度な推論能力が求められます。LLMは問題解決能力は高いものの、誤った思考プロセスを特定することは苦手とする場合があります。
+    * **誤解間の類似性:** 誤解リストには、概念的・計算的に非常に似通ったものが多く含まれており、これらの微妙な違いを区別する精度が必要です。
+    * **未知の誤解への汎化:** テストデータには訓練データに存在しない誤解が含まれる可能性が高く、モデルはこれらの未知の誤解に対しても頑健に機能する必要があります。
+    * **数学的内容の複雑性:** 問題文や選択肢は数学的な記号 (LaTeX) や専門用語を含むため、これらを正確に解釈する必要があります。
+    * **ランキング精度:** 単に誤解を特定するだけでなく、関連性の高い順に正確にランキングすることが評価指標 (MAP@25) で求められます。
 
 **データセットの形式 (Dataset Format)**
 
-提供される主なデータは、生徒のEediプラットフォーム上での活動ログ（主に多肢選択問題への回答）で、表形式（CSVファイル）で提供されます。
+提供されるデータは、問題、生徒の解答履歴、誤解リスト、およびそれらの関連情報です。
 
-1.  **トレーニングデータ (`train.csv` など):**
-    * 生徒の回答記録を含みます。主要な列として以下のようなものが考えられます。
-        * `user_id`: 生徒の識別子。
-        * `question_id`: 問題の識別子。
-        * `chosen_answer`: 生徒が選択した回答肢（例: 'A', 'B', 'C', 'D'）。
-        * `is_correct`: その回答が正解だったかどうか（True/False）。
-        * `misconception_id`: **予測対象のターゲット変数**。生徒が**不正解**だった場合に、その選択肢を選んだ原因と考えられる誤解のID。正解の場合は通常nullやNaNが入ります。
-
-2.  **問題メタデータ (`questions.csv`, `question_metadata.csv` など):**
-    * 各問題に関する詳細情報。
-        * `question_id`: 問題の識別子。
-        * 問題文、選択肢の内容、正解の選択肢。
-        * **重要な情報:** 特定の**不正解の選択肢**が、どの**誤解ID (`misconception_id`)** に対応するかを示すマッピング情報。これがモデル構築の鍵となります。
-    * 誤解の種類とその説明をリスト化したファイル (`misconceptions.csv` など) が別途提供される可能性もあります。
-
-3.  **テストデータ (`test.csv` など):**
-    * トレーニングデータと同様の形式ですが、生徒が不正解だった回答記録のみが含まれ、`misconception_id` の列は含まれません。
-    * 参加者は、このテストデータに対して `misconception_id` を予測します。
-
-4.  **`sample_submission.csv`**:
-    * 提出フォーマットのサンプル。通常、テストデータの各行に対応する `row_id` や回答セッションIDと、予測された `misconception_id` の列を持ちます。
+1.  **トレーニングデータ:**
+    * `train.csv`: 生徒の解答記録。`QuestionId`, `UserId`, `AnswerValue` (生徒の解答), `IsCorrect`, `CorrectAnswer`, `AnswerId` を含む。
+    * `questions.csv`: 問題の詳細。`QuestionId`, `QuestionText` (問題文), `AnswerValue` (選択肢番号), `AnswerText` (選択肢テキスト) を含む。
+    * `misconceptions.csv`: 誤解のリスト。`MisconceptionId`, `MisconceptionName` (誤解の説明テキスト) を含む。
+    * `question_misconceptions.csv`: 問題の誤答と誤解の間の**正解ラベル**。`QuestionId`, `AnswerValue` (誤答), `LinkedMisconceptionId` (関連する誤解IDのリスト) を含む。これがモデル学習の主要な教師データとなります。
+    * `subject_metadata.csv`, `student_metadata.csv`: 科目や生徒に関する追加情報（任意で使用）。
+2.  **テストデータ:**
+    * `test.csv`: 予測対象となる誤答データ。`QuestionId`, `UserId`, `AnswerValue` を含む。
+3.  **`sample_submission.csv`**:
+    * 提出フォーマットのサンプル。
+        * `QuestionId_AnswerValue`: 問題IDと誤答選択肢の組み合わせID。
+        * `misconception_id`: **ターゲット変数**。予測された関連性の高い誤解IDを、スペース区切りで最大25個、関連度順に並べた文字列。
 
 **評価指標 (Evaluation Metric)**
 
-* **指標:** **Macro-averaged F1 Score (マクロ平均F1スコア)**
+* **指標:** **MAP@25 (Mean Average Precision at 25)** 平均適合率の平均@25。
 * **計算方法:**
-    1.  まず、**各誤解クラスごと**に F1スコア を計算します。F1スコアは適合率（Precision）と再現率（Recall）の調和平均であり、予測の正確さと網羅性のバランスを示します。(F1 = 2 * (Precision * Recall) / (Precision + Recall))
-    2.  次に、全誤解クラスについて計算されたF1スコアを単純に平均します（マクロ平均）。
-* **意味:** マクロ平均F1スコアは、データセット内での出現頻度に関わらず、**各誤解の種類（クラス）を平等に評価**します。これにより、まれな誤解の検出精度も、頻繁に見られる誤解の検出精度と同じ重みで最終スコアに貢献します。多クラス分類タスクにおいて、クラス間のデータ量不均衡の影響を抑えつつ、全体的な性能を評価するのに適しています。
+    * 各テストケース（`QuestionId_AnswerValue` のペア）に対して、モデルは関連度順に最大25個の誤解IDを予測します。
+    * 各テストケースについて、予測リストと正解リストを比較し、Average Precision @ 25 (AP@25) を計算します。これは、予測リストの上位から見ていき、正解の誤解IDが見つかるたびにその時点での適合率 (Precision) を算出し、それらの平均を取ることで得られます（正解リストの総数で正規化される場合あり）。
+    * 最終的なスコアは、**全てのテストケースにわたるAP@25の平均値 (MAP@25)** となります。
+* **意味:** モデルが、各誤答に対して関連性の高い誤解を、リストの上位にどれだけ正確にランク付けできているかを評価する指標です。単に正解を含むだけでなく、その順序が重要視されます。スコアは**高い**ほど良い性能を示します (最大1.0)。
 
-要約すると、Eediコンペティションは、生徒の数学問題への誤答データから、その原因となった誤解の種類を特定する多クラス分類タスクです。データは生徒の回答ログと問題メタデータから成り、性能は各誤解クラスを平等に評価するマクロ平均F1スコアによって測られます。
+要約すると、このコンペティションは、生徒の数学MCQにおける誤答がどの誤解に起因するかを特定し、関連度順にランク付けするランキングタスクです。データは問題、解答履歴、誤解リストから成り、性能はMAP@25（高いほど良い）によって評価されます。未知の誤解への対応とランキング精度が鍵となります。
 
 ---
 
-**全体的な傾向:**
+**全体的な傾向**
 
-このコンペでは、数学の多肢選択式問題の不正解に対して、生徒が抱いている可能性のある誤概念を特定し、ランキング付けすることが課題でした。上位解法では、Retrieve-and-Rerankのフレームワークが広く採用されています。大規模言語モデル（LLM）を活用したアプローチが主流であり、特にQwenシリーズのモデルが頻繁に登場します。合成データの生成、知識蒸留、Chain of Thought（CoT）、ハードネガティブサンプリング、リストワイズランキングなどが重要なテクニックとして用いられています。また、 unseen な誤概念への対応も重要なポイントとなっています。
+このコンペティションでは、誤答とその原因となる誤解を関連付けるために、**Retrieve & Rerank** フレームワークが圧倒的な成功を収めました。これは、まず候補となる誤解を広く検索 (Retrieve) し、次にそれらをより精密に順位付け (Rerank) する2段階のアプローチです。両ステージで**大規模言語モデル (LLM)**、特に **Qwen シリーズ (14B, 32B, 72B)** や **Llama シリーズ** のファインチューニングが鍵となりました。
 
-**各解法の詳細:**
+**Retriever** ステージでは、LLMを Embedding モデルとしてファインチューニングし、問題・誤答ペアと誤解テキスト間の類似度を計算して候補を抽出しました。損失関数として MultipleNegativesRankingLoss や ArcFace が用いられ、**ハードネガティブマイニング**（類似しているが正解ではない誤解を学習に使う）が重要でした。
 
-**1位**
+**Reranker** ステージでは、Retrieverが抽出した候補（数十個）を、より強力なLLMを用いて精密に順位付けしました。入力には問題文、正答、誤答、候補となる誤解テキストに加え、LLM自身に生成させた**Chain-of-Thought (CoT) や Rationale (根拠説明)**、あるいは**Few-shot例**を含めることが有効でした。Rerankの手法としては、候補を一つずつ評価する **Pointwise** と、複数の候補を同時に評価する **Listwise** があり、特に後者が高い性能を示しました。Listwiseでは、LLMに直接ランキングを生成させるか、特定の選択肢トークン（例: 'A', 'B', ... や 'Yes', 'No'）の出力確率を用いてスコアリングする手法が取られました。
 
-- **アプローチ:** Retrieve-and-Rerankシステム（4段階）。不正解と誤概念の関連性をランキング付け。
-- **アーキテクチャ:**
-    - **Retriever:** Qwen/Qwen2.5-14B エンコーダ（高Recall）。
-    - **Ranker:** Fine-tuned Qwen/Qwen2.5-14B, Qwen/Qwen2.5-32B, Qwen/Qwen2.5-72B。
-- **アルゴリズム:** MultipleNegativesRankingLoss (Retriever), Cross Entropy Loss (Ranker)。
-- **テクニック:**
-    - **合成データ:** クラスター化された誤概念に基づいてClaude 3.5 Sonnetで生成。LLMによるフィルタリング。外部の誤概念も活用。
-    - **Chain of Thought (CoT):** Claude 3.5 Sonnetで生成し、Qwen 2.5シリーズモデルで蒸留。
-    - **Train-Validation Split:** ConstructIdに基づくGroupKFold。
-    - **Retriever:** LoRAファインチューニング、Temperature調整、バッチ内の正例は1つのみ、キュレーション前の合成データで事前学習。
-    - **Ranker:** ポイントワイズランキング（14B, 32B）、リストワイズランキング（72B）。
-    - **Rankerの工夫:** Few Shot Examples、Distillation/Pseudo Labeling、Negative Ratioの調整、Chain of Thought (CoT) の利用。
-    - **Quantization:** AutoAWQによる量子化。タスク固有のキャリブレーションデータセットを使用。
+**未知の誤解**への対応が本コンペの核心であり、多くのチームが **LLM を用いた合成データ生成**に取り組みました。訓練データに存在しない誤解に対して、LLMに新しい問題文、選択肢、誤答例を生成させ、これを訓練データに追加することで、汎化性能を大幅に向上させました。生成データの品質を担保するために、さらに別のLLMを用いたフィルタリング（LLM-as-a-judge）も行われました。また、**誤解テキスト自体の拡張**（LLMによる説明文生成）もRetrieverの性能向上に寄与しました。
 
-**2位**
+推論時間制約（9時間）の中で大規模なRerankerモデル（特に72Bクラス）を利用するため、**AWQ** や **AutoRound** による**4bit量子化 (Quantization)** と、**VLLM** ライブラリを用いた高速推論が不可欠でした。
 
-- **アプローチ:** Retrieve-and-Rerank。過去のEEDIコンペのメタデータ、合成データ生成、誤概念の拡張、Chain of Thought（CoT）を活用。
-- **アーキテクチャ:**
-    - **Retriever:** Linq-AI-Research/Linq-Embed-Mistral (Arcface loss), Qwen/Qwen2.5-14B, Qwen/Qwen2.5-32B, Qwen/QwQ-32B-Preview (MultipleNegativesRankingLoss)。
-    - **Reranker:** Qwen2.5-14B-Instruct, Qwen2.5-72B-Instruct, Llama-3.3-70B-Instruct (リストワイズ)。
-- **アルゴリズム:** Arcface loss, MultipleNegativesRankingLoss。
-- **テクニック:**
-    - **前処理:** 過去のEEDIコンペのメタデータを活用し、親Subject情報を追加。
-    - **合成データ:** LLM（主にQwen-math, gpt-4o-mini）による質問生成、誤概念制約下での不正解生成、品質フィルタリング。複数の生成フェーズ。
-    - **誤概念拡張:** LLM（llama3.1-70b-Instruct, qwen2.5-72b-Instruct）による誤概念の説明生成。
-    - **Chain of Thought (CoT):** Qwen2.5-32B-Instruct-AWQで生成。
-    - **Retriever:** CoTをオプションで入力に利用。ラストトークンPooling。ハードネガティブサンプリング。
-    - **Reranker:** スライディングウィンドウ方式のリストワイズランキング。テスト時の拡張（TTA）。
-    - **学習:** QLoRAによるファインチューニング。リストワイズ選択のランダム化、ネガティブサンプルのマイニング。
-    - **Quantization:** intel/auto-roundライブラリを使用。vLLM互換。
-    - **Inference:** vLLMを使用。プレフィックスキャッシュの有効化。
+**アンサンブル**も精度向上の常套手段で、Retriever/Rerankerともに、異なるバックボーン、学習データ、設定、Fold/Seedで学習した複数のモデル出力を組み合わせることで、最終的な予測の頑健性と精度を高めていました。
 
-**3位**
+**各解法の詳細**
 
-- **アプローチ:** 2段階アプローチ（Retrieve-and-Rerank）。未知の誤概念への対応を重視。
-- **アーキテクチャ:**
-    - **Retriever:** Qwen-14B Embedder (アンサンブル)。
-    - **Reranker:** Qwen-32B-instruct-AWQ (LoRAアンサンブル)。
-- **アルゴリズム:** MultipleNegativesRankingLoss (Retriever), Cross Entropy Loss (Reranker)。
-- **テクニック:**
-    - **Retriever:** [@anhvth226](https://www.kaggle.com/anhvth226) のQwen-14B EmbedderとFlagEmbeddingで学習したQwen-14B Embedderのアンサンブル。
-    - **Reranker:** 様々な学習パラメータとクロスバリデーションで学習した6つの異なるLoRAのアンサンブル。GPT4-miniで生成したデータも一部使用。
-    - **魔法:** テストセットに多数の未知の誤概念が存在することに着目。LBプロービングにより既知と未知の誤概念の比率を推定し、未知の誤概念の予測確率を定数倍するポストプロセス。
-    - **その他:** ランダムな誤概念の順序シャッフル（Rerankerへの入力）。
+**[1位](https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics/discussion/551688)**
 
-**4位**
+* **アプローチ:** Retrieve (Qwen2.5-14B) + Cascade Rerank (14B -> 32B -> 72B)。合成データとCoT活用。
+* **アーキテクチャ:** Retriever: Qwen2.5-14B。Reranker: Qwen2.5-14B (Pointwise), Qwen2.5-32B (Pointwise), Qwen2.5-72B (Listwise)。CoT生成: Qwen2.5-Math-7B, 14B, 32B。
+* **アルゴリズム:** Embedding (MNRL), Pointwise/Listwise Reranking (CE Loss)。
+* **テクニック:** **合成データ生成** (クラスタリング+Few-shot+GPT-4oフィルタリング)。**CoT生成** (Claude 3.5 Sonnet) と入力への活用。RetrieverでRecall重視。RerankerでFew-shot例入力。疑似ラベルによる蒸留。高ネガティブ比率学習。Quantization (AutoAWQ)。VLLM推論。
 
-- **アプローチ:** 未知の誤概念への対応を重視したRetrieve-and-Rerank。データ生成、誤概念生成、Retriever、Reranker、ポストプロセス。
-- **アーキテクチャ:**
-    - **データ生成:** Qwen2.5-72B-Instruct-AWQ。
-    - **誤概念生成:** Qwen2.5-32B-instruct-AWQ。
-    - **Retriever:** Fine-tuned Qwen2.5-14B-instruct, Qwen2.5-32B-instruct (LoRA)。
-    - **Reranker:** Fine-tuned Qwen2.5-32B-instruct (LoRAアンサンブル)。
-- **アルゴリズム:** MultipleNegativesRankingLoss (Retriever), Cross Entropy Loss (Reranker)。
-- **テクニック:**
-    - **検証戦略:** QuestionIdに基づくGroup KFold（5分割）。未知の誤概念に対するスコアも評価。
-    - **データ生成:** 未知の誤概念に対応する質問、回答選択肢、不正解を生成。プロンプトに多数の例を含める。
-    - **誤概念生成:** 質問、回答などから誤概念を生成。
-    - **Retriever:** 質問テキスト、回答テキストに加えて、生成された誤概念もテキストに追加して学習。Qwen2.5-14B-instructとQwen2.5-32B-instructの出力を結合して検索。既知の誤概念と未知の誤概念を区別して検索。
-    - **Reranker:** 複数のQwen2.5-32B-instructモデルをLoRAでファインチューニング。ネガティブサンプルの数を調整し、生成されたデータを学習データに追加。LoRAアンサンブル。
-    - **ポストプロセス:** 学習データに存在した誤概念の予測スコアを減衰。
-    - **高速化:** データ生成と推論にvLLMを使用。
+**[2位](https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics/discussion/551651)**
 
-**5位**
+* **アプローチ:** Retrieve (Mistralベース, Qwen2.5-14B x2) + Sliding Window Rerank (14B -> 72B/Llama70B)。合成データと誤解拡張、CoT活用。
+* **アーキテクチャ:** Retriever: Linq-Embed-Mistral, Qwen2.5-14B, Qwen2.5-32B, Qwen/QwQ-32B。Reranker: Qwen2.5-14B, 72B, Llama-3.1-70B。CoT生成: Qwen2.5-32B。
+* **アルゴリズム:** Embedding (ArcFace, MNRL), Listwise Reranking。
+* **テクニック:** 合成データ生成 (複数世代、GPT-4o-miniフィルタリング)。**誤解テキスト拡張** (LLMで説明文生成)。**CoT生成**と入力への活用。**Listwise Reranker** (Sliding Window式: 8-17位を14Bで、1-10位を72B/70Bで再ランク)。Quantization (AutoRound)。VLLM推論 (Prefix Caching)。TTA (候補順序反転)。
 
-- **アプローチ:** 知識蒸留を用いたRetrieve-and-Rerank。未知の誤概念に対応するための合成データ生成。リストワイズランキングにLLMを活用。
-- **アーキテクチャ:**
-    - **知識蒸留:** Qwen 2.5 32B Instruct。
-    - **Candidate generation (Biencoder):** dunzhang/stella_en_1.5B_v5 (SentenceTransformer)。
-    - **Listwise reranking:** Fine-tuned Qwen 2.5 32B Instruct。
-- **アルゴリズム:** CachedMultipleNegativesRankingLoss (Biencoder), Cross Entropy Loss (Reranker)。
-- **テクニック:**
-    - **クロスバリデーション:** SubjectIdに基づくGroupKFold（5分割）。
-    - **合成データ生成:** 未学習のMisconceptionIdごとに、類似のMisconceptionNameを持つ既存のデータセット情報をfew-shotプロンプティング（gemini-1.5-pro）で生成。
-    - **知識蒸留 (KD):** QuestionText、正解、不正解をLLMに入力して不正解の理由を生成。後続のモデルの入力として使用。
-    - **Candidate generation:** Biencoderで各問題と不正解ペアに対するMisconceptionName候補を抽出。ハードネガティブは効果なし。
-    - **Listwise reranking:** Biencoderの出力でソートされたMisconception候補を52個ずつLLM（Qwen 2.5 32B Instruct）に入力し、各オプションの確率を取得してランキング。トップ104候補を使用し、2回に分けて推論。
-    - **アンサンブル:** 3つのフォールドでリストワイズリランカーの結果をアンサンブル。
+**[3位](https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics/discussion/551498)**
 
-**6位**
+* **アプローチ:** Retrieve (Qwen-14B x2) + Rerank (Qwen-32B)。**後処理による未知誤解ブースト**。
+* **アーキテクチャ:** Retriever: Qwen2.5-14B (FlagEmbeddingベース?)。Reranker: Qwen2.5-32B-instruct-AWQ (LoRA)。
+* **アルゴリズム:** Embedding, Listwise Reranking風 (Yes/Noトークンlogit)。
+* **テクニック:** 合成データ生成 (GPT4-mini)。**後処理**: LBプロービングに基づき、未知誤解のスコアを定数倍 (約75%が未知と推定)。Reranker入力候補のランダムシャッフル。LoRAアンサンブル。
 
-- **アプローチ:** Retrieve-and-Rerank。未知の誤概念への汎化性を重視。合成データ生成、Latexテキストの処理、知識蒸留、2段階Reranker。
-- **アーキテクチャ:**
-    - **Retriever:** gte-Qwen2-7B-instruct, Salesforce-SFR-Embedding-2_R, bge-multilingual-gemma2, Qwen2.5-14B-Instruct (LoRA)。
-    - **Reranker:** Qwen 32B instruct (LoRA, AWQ)。
-- **アルゴリズム:** MultipleNegativesRankingLoss (Retriever), Cross Entropy Loss, KL Divergence (Reranker)。
-- **テクニック:**
-    - **検証戦略:** 見られた誤概念と見られない誤概念に等しい重みを置くことを想定。
-    - **合成データ生成:** Qwen 72B instructによるfew-shot生成。類似の学習データの誤概念からランダムに3つのfew-shot例を使用。
-    - **Retriever:** pylatexencライブラリでLatexをプレーンテキストに変換。ハードネガティブマイニング。BNB 4bit量子化。
-    - **Reranker:** `DataCollatorForCompletionOnlyLM`を使用。テスト誤概念を学習から除外。
-    - **Distillation:** 異なるシードで学習したモデルのロジットを用いてKLダイバージェンス蒸留。
-    - **First stage reranker:** 上位100個の類似誤概念からランダムに49個のネガティブサンプルを選択し、正解の誤概念をランダムな位置に配置して分類。
-    - **Misconception rephrasing:** Qwen 32B-Instructで誤概念を一般的な形式に言い換え、元の誤概念のロジットと組み合わせる。
-    - **Second stage reranker:** 最初のRerankerの上位ランクの誤概念の小さなウィンドウで、すべての可能な順列を適用し、ロジットを平均化して再度ランク付け。最適なウィンドウサイズは2。
-    - **Quantization:** AWQ 4bit量子化。
+**[4位](https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics/discussion/551559)**
 
-**7位**
+* **アプローチ:** Retrieve (Qwen2.5-14B, 32B) + Rerank (Qwen2.5-32B x3)。合成データと誤解生成活用。
+* **アーキテクチャ:** Retriever: Qwen2.5-14B-instruct, Qwen2.5-32B-instruct。Reranker: Qwen2.5-32B-instruct (LoRA)。
+* **アルゴリズム:** Embedding (MNRL), Listwise Reranking風 (Yes/No?)。
+* **テクニック:** **合成データ生成** (未知誤解ターゲット、Qwen2.5-72B使用)。**誤解生成** (LLMでQuestion/AnswerからMisconceptionを生成しRetriever入力に追加)。Retrieverは複数Fold出力を連結。Rerankerは複数ネガティブ数、合成データ有無で学習したモデルをLoRAマージ等でアンサンブル。VLLM推論。後処理 (既知誤解スコア低減)。
 
-- **アプローチ:** クラスごとのガウスヒートマップ予測を行う3Dセグメンテーションモデル。シミュレーションデータでの事前学習と実験データでのファインチューニング。
-- **アーキテクチャ:** U-Net (バックボーン: ResNet50d, EfficientNetV2-M), DeepLab (バックボーン: ResNet50d)。
-- **アルゴリズム:** U-Net、ResNet、EfficientNet、DeepLab。
-- **テクニック:**
-    - 事前学習とファインチューニング。
-    - パーセンタイルクリッピング、データセット固有のスケーリング。
-    - スライディングウィンドウによるパッチ分割とランダムシフト。
-    - シフト、CutMix、MixUp、RandomFlip、Affine、Rot90、コントラスト、ガンマ、ガウスノイズによる強力なデータ拡張。
-    - 重み付きBCE損失。
-    - EMA（指数移動平均）。
-    - モデルスープのアンサンブル。
-    - 4x TTA、4x スライディングウィンドウ推論。
-    - ロジットの平均化、エッジアーティファクト軽減、ガウシアンブラー、WBF、ロジット空間での閾値処理、LBプロービング。
+**[5位](https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics/discussion/551391)**
+
+* **アプローチ:** Retrieve (stella_1.5B) + Rerank (Qwen2.5-32B)。合成データとKD/Rationale活用。
+* **アーキテクチャ:** Retriever: dunzhang/stella_en_1.5B_v5。Reranker: Qwen2.5-32B-Instruct。KD/Rationale生成: Qwen2.5-32B-Instruct。
+* **アルゴリズム:** Embedding (Cached MNRL), Listwise Reranking (単一トークン選択肢確率)。
+* **テクニック:** 合成データ生成 (未知誤解ターゲット、gemini-1.5-pro使用、類似MisconceptionをFew-shot例に)。**知識蒸留/Rationale生成**と入力への活用。RerankerはListwise (52候補同時入力、アルファベットトークン確率でソート)。Quantization (GPTQ)。VLLM推論。複数Foldアンサンブル。
+
+**[6位](https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics/discussion/551565)**
+
+* **アプローチ:** 問題分解 (P(efs=1)分類 + E[time|1]回帰) + NNスタッキング。
+* **アーキテクチャ:** Stage 1: GBDT (LGBM/XGB/CatBoost)。Stage 2: TabM + 1層NN。
+* **アルゴリズム:** GBDT, MLP (TabM)。
+* **テクニック:** Stage 2 NN入力: TabMリスクスコア + Stage 1 GBDT予測の2次多項式特徴量。NNは評価指標近似損失 (Sigmoid使用) で学習。複数シードCV (20 fold x 5 seeds)。
+
+**[7位](https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics/discussion/551388)**
+
+* **アプローチ:** 3パイプライン (Retriever+Reranker) のVoting Ensemble。
+* **アーキテクチャ:** Retriever: SFR-Embedding-2_R, public Qwen14B。Reranker: Qwen2.5-32B AWQ+LoRA (40オプション選択 or Binary選択)。Rationale生成: Qwen35B。
+* **アルゴリズム:** Embedding, Listwise/Pointwise Reranking。
+* **テクニック:** 合成データ生成。Rationale生成と活用。Retriever候補フィルタリング。Rerankerは異なる形式 (40オプション選択 vs Binary Yes/No) を使用。VLLM推論。最終段で3パイプラインのTop25リストをRankベースでVoting。後処理 (未知誤解ブースト)。
+
+**[8位](https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics/discussion/551412)**
+
+* **アプローチ:** Retrieve (Qwen2.5-14B x4) + Rerank (Qwen2.5-32B)。合成データ活用。
+* **アーキテクチャ:** Retriever: Qwen2.5-14B。Reranker: Qwen2.5-32B。
+* **アルゴリズム:** Embedding (LoRA FT), Pointwise Reranking (Yes logit, LoRA FT)。
+* **テクニック:** 合成データ生成 (ChatGPT)。Iterative Hard Negative Mining。Rerankerは全データで学習。Wise-FTによるLoRAマージ。Quantization (AWQ)。VLLM推論 (Prefix Caching)。
+
+**[9位](https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics/discussion/551420)**
+
+* **アプローチ:** Retrieve (Qwen2.5-14B) + Rerank (14B, 32B)。合成データとRationale活用。
+* **アーキテクチャ:** Retriever: Qwen2.5-14B-Instruct。Reranker: Qwen2.5-14B-Instruct, Qwen2.5-32B-Instruct AWQ。Rationale生成: Qwen2.5-32B-Instruct AWQ。
+* **アルゴリズム:** Embedding (LoRA FT, Contrastive Learning), Pointwise/Causal LM Reranking。
+* **テクニック:** 合成データ生成 (GPT-4o)。Rationale生成と入力への活用。Retrieverはハードネガティブマイニング。RerankerはBinary分類またはCausal LM (Yesトークンlogit)。AWQ量子化。VLLM推論。
+
+**[10位](https://www.kaggle.com/competitions/eedi-mining-misconceptions-in-mathematics/discussion/551722)**
+
+* **アプローチ:** Retrieve (Qwen2.5-14B x3) + Rerank (Qwen32B AWQ+LoRA)。合成データ活用。
+* **アーキテクチャ:** Retriever: Qwen2.5-14B-Instruct, Qwen2.5-Coder-14B-Instruct。Reranker: Qwen2.5-32B AWQ (LoRA)。
+* **アルゴリズム:** Embedding (LoRA FT), Listwise Reranking (多肢選択式、CE損失)。
+* **テクニック:** 合成データ生成 (GPT-4O)。Retrieverは合成データで事前学習後、訓練データでファインチューニング。Rerankerは多肢選択式 (Top25オプションの確率予測)。LoRAマージによるアンサンブル。

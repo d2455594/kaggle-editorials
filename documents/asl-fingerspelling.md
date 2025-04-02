@@ -5,124 +5,115 @@ startdate: 2023-05-11
 enddate: 2023-08-25
 ---
 # Google - American Sign Language Fingerspelling Recognition
-https://www.kaggle.com/competitions/asl-fingerspelling
+[https://www.kaggle.com/competitions/asl-fingerspelling](https://www.kaggle.com/competitions/asl-fingerspelling)
 
 **概要 (Overview)**
 
-- **目的:** このコンペティションの目的は、アメリカ手話（American Sign Language - ASL）において、単語や固有名詞などを文字ごとに表現する**指文字（Fingerspelling）のシーケンス**を**ビデオ（またはそこから抽出されたランドマークデータ）から認識し、対応する文字列に書き起こす**モデルを開発することです。
-- **背景:** 手話認識技術、特に複雑で高速な動きを含む指文字の認識精度を向上させることは、聴覚障がいのある人々のためのコミュニケーション支援において非常に重要です。リアルタイム翻訳ツール、教育ソフトウェア、ヒューマン・コンピュータ・インタラクションの改善など、多くの応用が期待されます。この種のコンペティションは、アクセシビリティ技術の向上を目指す取り組みの一環として行われることが多いです。
-- **課題:** 指文字の認識は、その速度、隣接する文字の影響による形状の変化（Coarticulation）、個人差（手の形、速度、スタイル）、類似した形状の文字の存在、ビデオ品質（照明、角度、背景）など、多くの要因により困難なタスクです。モデルは、提供される（多くの場合ランドマーク形式の）時系列データから、これらの変動に対して頑健に正しい文字シーケンスを推定する必要があります。これは、ビデオ（動き）を入力とし、テキスト（文字列）を出力とする**シーケンス・トゥ・シーケンス（Sequence-to-Sequence）** の課題と捉えられます。
+* **目的:** このコンペティションの目的は、アメリカ手話 (ASL) の**指文字 (Fingerspelling)** を行っている動画から抽出された手の動きのデータ（ランドマーク）をもとに、綴られている**文字列を正確に認識する**モデルを開発することです。
+* **背景:** GoogleのAI for Social Goodプログラムの一環として開催されました。指文字は、手話の語彙にない固有名詞などを表現するために不可欠な要素であり、手話認識・翻訳技術の精度向上において重要な課題です。前年に開催されたASL Signsコンペ（個々の手話単語認識）に続く、より連続的で複雑な認識タスクとなります。
+* **課題:**
+    * **連続動作の認識とセグメンテーション:** 指文字は一連の流れるような手の動きであり、文字と文字の間の明確な区切りがないため、時間的な連続性を捉え、個々の文字を分離・認識する必要があります。
+    * **話者による多様性:** 指文字の速度、明瞭さ、手の形や動きの大きさは話者によって大きく異なります。
+    * **視点とオクルージョン:** 記録時のカメラアングルや手の位置によってランドマークの見え方が変化し、指の一部が隠れる（オクルージョン）こともあります。
+    * **データの品質:** Mediapipeによって抽出されたランドマークデータにはノイズや欠損が含まれる可能性があります。また、データセットには非常に短いシーケンスや、手の情報がほとんどないシーケンスも含まれます。
+    * **TFLiteモデルの制約:** 提出モデルはTensorFlow Lite形式である必要があり、モデルサイズ (40MB) と使用できる演算子 (Ops) に厳しい制限があります。これにより、複雑なモデルアーキテクチャやデコードアルゴリズムの実装が困難になります。
+    * **推論時間制限:** 5時間という推論時間制限内で、テストデータ全体の予測を完了する必要があります。
 
 **データセットの形式 (Dataset Format)**
 
-提供される主なデータは、指文字のシーケンスを示すビデオから抽出されたランドマーク（キーポイント）データと、それに対応する正解の文字列（フレーズ）です。
+提供されるデータは、主に指文字動画から抽出されたランドマークの時系列データと、対応する正解文字列です。
 
-1. **トレーニングデータ:**
-    
-    - `train.csv`: 各指文字シーケンスのメタデータ。`sequence_id`（シーケンスの一意な識別子）、`participant_id`（手話を行った参加者のID）、そして**ターゲット変数**となる正解の文字列 `phrase` が含まれます。
-    - `*.tfrecord` ファイル群: 各 `sequence_id` に対応する**時系列ランドマークデータ**が TensorFlow Record 形式で格納されています。これには通常、ビデオの各フレームにおける手（指の関節など）、顔、ポーズ（体）のキーポイントの座標（x, y, z）が含まれます。生のビデオデータではなく、これらのランドマーク情報が主に入力として用いられます。
-    - `supplemental_metadata.csv`: 追加のメタデータが含まれる場合があります。
-2. **テストデータ:**
-    
-    - トレーニングデータと同様の `.tfrecord` 形式で、未知の指文字シーケンスのランドマークデータが提供されます。
-    - 正解の文字列 `phrase` は含まれません。参加者はこれらのランドマークシーケンスから `phrase` を予測します。
-3. **`sample_submission.csv`**:
-    
-    - 提出フォーマットのサンプル。`sequence_id` と `phrase` の列を持ちます。参加者は、各 `sequence_id` に対して予測した文字列を `phrase` 列に記入して提出します。
+1.  **トレーニングデータ:**
+    * `train.csv`: 各訓練シーケンスのメタデータ。
+        * `path`: ランドマークデータファイル (`.parquet`) への相対パス。
+        * `sequence_id`: 各シーケンスの一意なID。
+        * `phrase`: **ターゲット変数**。指文字で綴られた正解の文字列。
+        * `participant_id`: 指文字を行った話者のID。
+    * `supplemental_metadata.csv` & `supplemental_landmarks/`: 追加のランドマークデータ（ラベルなし、または弱いラベル）。
+    * `character_to_prediction_index.json`: 文字とモデル出力インデックス（整数）のマッピング定義。
+    * `*.parquet` ファイル (各 `path` に対応): Mediapipeで抽出されたランドマークの時系列データ。
+        * `frame`: フレーム番号。
+        * `row_id`: `frame`-`type`-`landmark_index` 形式のID。
+        * `type`: ランドマークの種類 (`face`, `left_hand`, `pose`, `right_hand`)。
+        * `landmark_index`: 各タイプ内でのランドマークのインデックス番号。
+        * `x`, `y`, `z`: 正規化されたランドマーク座標。zは深度を表すが、信頼性は高くないとされる。
+2.  **テストデータ:**
+    * `test_landmarks/`: テスト用のランドマークデータファイル (`.parquet`)。
+    * (隠しデータ): テストデータに対応する正解の `phrase` 文字列。
+3.  **`sample_submission.csv`**:
+    * 提出フォーマットのサンプル。
+        * `row_id`: テストシーケンスの `sequence_id`。
+        * `phrase`: モデルによって予測された指文字の文字列。
 
 **評価指標 (Evaluation Metric)**
 
-- **指標:** **正規化された編集距離 (Normalized Edit Distance)**（レーベンシュタイン距離に基づく）
-- **計算方法:**
-    1. モデルが予測した文字列 (`prediction`) と、正解の文字列 (`truth`) の間の**レーベンシュタイン距離**（一方の文字列をもう一方の文字列に変換するために必要な最小の編集操作（挿入、削除、置換）回数）を計算します。
-    2. 計算されたレーベンシュタイン距離を、**正解の文字列の長さ (`len(truth)`)** で割って正規化します。
-    3. 最終的なスコアは、テストデータセット全体の**正規化された編集距離の平均値**となります。
-- **意味:** この指標は、モデルが予測した指文字の書き起こしが、正解の文字列とどれだけ異なっているかを文字レベルの編集回数で評価します。音声認識や機械翻訳など、シーケンス変換タスクの評価に標準的に用いられます。スコアは**低い**ほど（0に近いほど）、予測が正解に近いことを意味し、モデルの性能が良いと評価されます。完全に一致する場合、編集距離は0となり、スコアも0になります。
+* **指標:** **正規化レーベンシュタイン距離 (Normalized Levenshtein Distance)**
+* **計算方法:**
+    * モデルが予測した文字列 (`prediction`) と、正解の文字列 (`ground_truth`) の間のレーベンシュタイン距離 (編集距離: 文字の挿入、削除、置換の最小回数) を計算します。
+    * 計算された編集距離を、**正解文字列の文字数 (`len(ground_truth)`)** で割ります。
+    * `NormalizedLevenshteinDistance = LevenshteinDistance(prediction, ground_truth) / len(ground_truth)` (ただし、`len(ground_truth)` が0の場合は1とするなどの処理が必要)。
+* **意味:** 予測された文字列が、正解の文字列と文字レベルでどれだけ異なっているかを評価する指標です。文字数で正規化することで、長い文字列と短い文字列の間で公平に比較できます。スコアは**低い**ほど良い（0が完全一致）性能を示します。
 
-要約すると、このコンペティションは、ASLの指文字を表すランドマークの時系列データから、元の文字列を書き起こすシーケンス・トゥ・シーケンスのタスクです。データはランドマークデータと正解文字列で構成され、性能は予測文字列と正解文字列間の正規化された編集距離（低いほど良い）によって評価されます。
+要約すると、このコンペティションは、手のランドマーク時系列データから指文字で綴られた文字列を認識するシーケンス・トゥ・シーケンスのタスクです。データはランドマーク座標と正解文字列で構成され、性能は正規化レーベンシュタイン距離（低いほど良い）で評価されます。TFLiteモデルの制約（サイズ、Ops、推論時間）への対応が重要な課題です。
 
 ---
 
 **全体的な傾向**
 
-上位解法では、Mediapipe等で抽出された手指、顔、ポーズなどのランドマーク（キーポイント）の時系列データを入力とし、手話の指文字（Fingerspelling）をテキストに変換するアプローチが主流でした。特に、自動音声認識（ASR）分野で用いられるTransformerベースのアーキテクチャ（Conformer, Squeezeformerなど）やアルゴリズム（CTC Loss, Attentionベースデコーダー、Joint CTC/Attention）を応用したものが多く見られます。モデルの過学習を防ぎ、未知の署名者への汎化性能を高めるために、多種多様なデータ拡張（Augmentation）が極めて重要なテクニックとして用いられました。時間軸方向の操作（タイムストレッチ、マスキング、CutMix）、空間的な操作（アフィン変換、フリップ）、特定のランドマーク（指、顔、ポーズ）を欠落させるDropoutなどが効果的でした。また、コンペティションの制約（TF-Liteモデルサイズ、推論時間）を満たすため、モデルの効率化（Rotary Embeddingsの採用、推論時のマスキング、キャッシュ利用）や、PyTorchで開発・学習したモデルをTensorFlow/TF-Liteに移植する作業も一般的でした。補助的なデータセットの利用や、後処理（信頼度の低い予測を固定文字列に置換するなど）、複数モデルのアンサンブルも有効な戦略でした。
+このアメリカ手話指文字認識コンペティションでは、前回のASL Signsコンペの知見を活かしつつ、連続的なシーケンスを扱うための工夫が求められました。上位解法の多くは、音声認識 (ASR) 分野で実績のある**シーケンス・トゥ・シーケンス (Seq2Seq) モデル**、特に **Transformer** ベースのアーキテクチャを採用しました。**Conformer** や **Squeezeformer** といった ASR 向けの強力なエンコーダー構造をランドマークデータに適用する試みが成功を収めています。
+
+**エンコーダー・デコーダー構造**が主流であり、ランドマークの時系列特徴量をエンコーダーで処理し、その出力を Transformer デコーダーや RNN (LSTM/GRU) デコーダーに入力して文字シーケンスを生成する構成が一般的でした。また、フレーム単位で文字確率を出力する **CTC (Connectionist Temporal Classification)** も依然として有効なアプローチであり、特に **CTC と Attention デコーダーを組み合わせたハイブリッドモデル**が高い性能を示しました。
+
+入力としては、**両手 (left_hand, right_hand)** のランドマークに加え、**ポーズ (pose)** や**顔（特に唇 lip）** のランドマークを含めることが精度向上に寄与しました。生の座標 (x, y, z) だけでなく、時間差分（速度・加速度）特徴量や、適切な正規化、欠損値処理が重要でした。3D座標を活用し、回転などの**3次元空間でのデータ拡張**を行うアプローチも有効でした。
+
+**データ拡張 (Augmentation)** は過学習抑制と汎化性能向上のために極めて重要でした。時間軸方向の操作（リサンプリング、シフト、ワーピング、マスキング）、空間的な操作（アフィン変換、左右反転）、特定の部位のドロップアウト（指、顔、ポーズ）、そして **CutMix**（時間軸上で異なるサンプルを混合）などが効果を発揮しました。
+
+学習テクニックとしては、**長いシーケンスの扱**い（パディングとマスキング、リサイズ）、**補助損失**（例: 逆順シーケンス予測）、**AWP (Adversarial Weight Perturbation)**、**EMA/SWA**、**LayerDrop** などが採用されました。
+
+デコード（予測文字列生成）においては、Greedy Search に加えて **Beam Search** を用いることでスコアが向上しましたが、TFLite の制約下で効率的に実装する必要がありました。また、信頼度の低い予測や入力データが極端に短い場合に、**固定の文字列（例: "2 a-e -aroe"）で置き換える**後処理が多くのチームで有効でした。
+
+モデルの **TFLite 変換**は必須であり、使用可能な演算子（Ops）の制限内でモデルを設計・実装する必要がありました。モデルサイズの制約 (40MB) を満たすために、**fp16 量子化**も一般的に行われました。
 
 **各解法の詳細**
 
-**1位**
+**[1位](https://www.kaggle.com/competitions/asl-fingerspelling/discussion/434485)**
 
-- **アプローチ:** 改良版Squeezeformer EncoderとTransformer Decoderの組み合わせ。多様なAugmentationによる正則化。信頼度予測による後処理。
-- **アーキテクチャ:** Encoder: Squeezeformer (改良版、時間次元削減なし、Relative Positional EncodingをRotary Embeddings(Llama Attention)に変更)。 Decoder: Transformer Decoder (2層)。 Feature Extraction: 2D CNNベース (ランドマーク種別ごと+全体)。信頼度予測用Linear層。
-- **アルゴリズム:** CrossEntropy Loss。補助損失 (逆順シーケンス予測)。MSE Loss (信頼度予測用、OOF予測に基づくターゲット)。Greedy Decoding。Rotary Embeddings (キャッシュ利用)。
-- **テクニック:**
-    - **データ前処理:** 130キーポイント使用（両手、腕ポーズ、顔）。正規化、NaNゼロ埋め。最大384フレームにリサイズ/パディング。
-    - **Augmentation:** CutMix (同一署名者内)、Finger Dropout (指単位の欠落)、Face/Pose Dropout、TimeStretch、時間/空間マスキング、アフィン変換など多数。Decoder入力マスキングも有効。
-    - **学習:** Cosine LRスケジュール、AdamW (推定)、混合精度(FP16)。訓練時マスキング（Padding無視）。
-    - **効率化/変換:** Rotary Embeddings (RoPE) 導入で高速化・省メモリ化。Decoder推論時の早期停止とキャッシュ利用。PyTorch学習→TensorFlow移植→TF-Lite (FP16)。
-    - **後処理:** 予測された信頼度スコアに基づき、低信頼度(<0.15)または短シーケンス(<15フレーム)の予測を固定文字列('2 a-e -aroe')に置換。
-    - **補助データ:** 限定的な利用（エポックごとにグループから1サンプル追加）。
-    - **アンサンブル:** 2シードのFullfitモデルのLogits平均。
+* **アプローチ:** Squeezeformer Encoder + Transformer Decoder。信頼度予測と後処理。
+* **アーキテクチャ:** 修正Squeezeformer (時間U-Netなし、RoPE使用、事前LayerNorm代替) + 2層Transformer Decoder。
+* **アルゴリズム:** Seq2Seq (Attentionベース)。
+* **テクニック:** 入力130点(手x2, ポーズ, 顔)。複数特徴抽出モジュール(全体+部位別)。Augmentation (CutMix, **FingerDropout**, TimeStretch, Affine, Masking等多数)。逆順シーケンス補助損失。**信頼度スコア予測**。後処理 (低信頼度/短シーケンスを定型句置換)。PyTorch学習→TF変換→TFLite (fp16)。
 
-**2位**
+**[2位](https://www.kaggle.com/competitions/asl-fingerspelling/discussion/434588)**
 
-- **アプローチ:** ASRアルゴリズム（CTC, Attention, Transducer）を比較検討し、CTCとAttentionを組み合わせたJoint Training & Decodingを採用。前回のASLコンペ1位解法をベースにモデルを深化。
-- **アーキテクチャ:** Encoder: Stacked Conv1DBlock + TransformerBlock (ASL Signコンペ1位ベース、サイズ・層数増加)。 Decoder: CTC Decoder (GRU+Linear) + Attention Decoder (Transformer Decoder 1層)。
-- **アルゴリズム:** CTC Loss + CrossEntropy Loss (重み付け: 0.25/0.75)。Joint CTC/Attention Decoding (CTC Prefix Score利用)。Greedy Decoding。AWP (Adversarial Weight Perturbation)。
-- **テクニック:**
-    - **データ前処理:** 全ランドマーク使用。標準化。左利き署名者を反転。最大768フレーム。
-    - **モデル:** EncoderはConv1D主体、Transformerブロック混合は効果薄。CTC/Attention Decoderは浅い層を使用。
-    - **Augmentation:** Random Resample, Random Affine, Random Cutout, Decoder入力へのランダムトークン置換。長期間学習で効果を発揮するAugmentationを見逃した可能性。
-    - **学習:** 400エポック。Cosine Decay LR、AdamW。AWP適用。
-    - **効率化:** Attention Decoder推論時のキャッシュ利用。
-    - **アンサンブル:** 3モデルのAttention Decoder出力平均が有効 (+0.009)。最終提出はJoint CTC/Attention。
+* **アプローチ:** Conformer/Transformer Encoder + **CTC/Attention Joint Training & Decoding**。
+* **アーキテクチャ:** Stacked Conv1D + Transformer Encoder (17層), 1層GRU (CTC用), 1層Transformer Decoder (Attention用)。
+* **アルゴリズム:** Seq2Seq (CTC + Attention ハイブリッド)。
+* **テクニック:** 入力214点(手x2, ポーズ, 唇, 鼻, 目)。差分特徴量。Augmentation (Flip, Resample, Affine, Masking)。Decoder入力トークン置換Augmentation。ラベルスムージング。**CTC Prefix Scoreを用いたBeam Search**。AWP。400エポック学習。
 
-**3位**
+**[3位](https://www.kaggle.com/competitions/asl-fingerspelling/discussion/434393)**
 
-- **アプローチ:** Squeezeformer EncoderとCTC Decoderの組み合わせ。時間次元削減とRotary Positional Encoding (ROPE)で効率化。Stochastic Pathで正則化。
-- **アーキテクチャ:** Encoder: Squeezeformer (17層、NEMO実装ベース、1層Downsamplingで時間次元削減)。 Decoder: CTC。
-- **アルゴリズム:** CTC Loss。Rotary Positional Encoding (ROPE)。AWP。後処理ルール（Blank Index処理）。
-- **テクニック:**
-    - **データ前処理:** 全ランドマーク使用(手、唇、目、鼻、ポーズ)。入力特徴量に元座標＋正規化座標＋絶対位置を追加。最大320フレーム。
-    - **Augmentation:** Time Scale (interp1d)、Time Dim Mask (シーケンス欠落＋50%フレームランダムマスク)、Affine (フリップ率低め)。
-    - **学習:** 訓練データ+補助データを重み付け(0.1)して混合学習(400エポック)後、訓練データのみでファインチューニング(10エポック)。Linear Decay LR、Adam。AWP適用。
-    - **モデル:** Stochastic Path (InstDropout付き)をEncoderブロックに適用。Dropoutは最終分類層(0.1)のみ。
-    - **効率化/変換:** ROPEで高速化。PyTorch学習→NobucoでKeras変換→TF-Lite。TFRecord入力。
+* **アプローチ:** Squeezeformer Encoder + CTC。時間次元削減とRoPE。
+* **アーキテクチャ:** Squeezeformer (NEMOベース、17層) + CTC Decoder。Encoder内で時間次元削減 (320->160)。
+* **アルゴリズム:** CTCベース。
+* **テクニック:** 入力 手+唇+目+鼻+ポーズ (x,y,z) + 正規化 + 絶対位置。入力フレーム数320。Augmentation (Time Scale, Time Mask(50%フレーム), Affine)。**RoPE (Rotary Positional Embedding)**。**Stochastic Depth (InstDropout)**。Dropoutは最終層のみ。CTC後処理(ブランク処理ルール)。補助データ併用学習+ファインチューニング。AWP。PyTorch学習→NobucoでKeras変換→TFLite。
 
-**4位**
+**[4位](https://www.kaggle.com/competitions/asl-fingerspelling/discussion/434983)**
 
-- **アプローチ:** Conformer EncoderとTransformer Decoderの組み合わせ。Edit Distance最適化を意識した学習と推論（MWER、Beam Search）。
-- **アーキテクチャ:** Encoder: Conformer (12層)。 Decoder: Transformer Decoder (2層、軽量)。
-- **アルゴリズム:** CrossEntropy Loss。MWER (Minimum Word Error Rate) Training (文字ベースEdit Distance使用)。Beam Search Decoding (TF-Lite互換実装、キャッシュ利用、Linear Length Penalty)。RAdam optimizer。
-- **テクニック:**
-    - **データ前処理:** 214入力（両手、ポーズ、鼻、唇のx,y）。正規化、NaNゼロ埋め、差分特徴量(t-1, t-2)。最大500フレーム。
-    - **Augmentation:** フリップ、リサンプル、アフィン変換、時間マスキング(最大60%)、空間Cutout。トークンAugmentation（ランダム置換）。
-    - **学習:** Cosine LR、RAdam。Label Smoothing、Gaussian Weight Noise。補助データ使用(初期100エポック)。MWER Training (Beam Searchで候補生成→Edit Distanceで重み付け→学習)。
-    - **推論:** Beam Search (k=5~6)。キャッシュ利用。長さペナルティ。
-    - **後処理:** 低情報量サンプル（短フレーム数、手検出フレーム少）の予測を固定文字列(" a-e -are")に置換。
+* **アプローチ:** Conformer Encoder + Transformer Decoderアンサンブル。MWER学習とBeam Search。
+* **アーキテクチャ:** Conformer Encoder (12層) + 2層Transformer Decoder。
+* **アルゴリズム:** Seq2Seq (Attentionベース)。
+* **テクニック:** 入力 手x2+ポーズ+唇+鼻。差分特徴量。Augmentation (Flip, Resample, Affine, Spatial Cutout, Frame Masking)。**ターゲットトークンAugmentation** (ランダム置換)。**Minimum Word Error Rate (MWER) Training**。**Beam Search** (k=5/6、TFLite互換実装、長さペナルティ)。後処理 (低情報量サンプルを定型句置換)。
 
-**5位**
+**[5位](https://www.kaggle.com/competitions/asl-fingerspelling/discussion/434415)**
 
-- **アプローチ:** Vanilla Transformer Encoderに事前学習(Data2vec 2.0)を適用。CTC SegmentationとTemporal CutMix Augmentation、Knowledge Distillationが特徴。
-- **アーキテクチャ:** Encoder: Vanilla Transformer (24層、Conv Stem、Rotary Position Embedding/RoPE)。 Decoder: CTC (Linear層)。
-- **アルゴリズム:** Data2vec 2.0 (事前学習)、CTC Loss、Knowledge Distillation (DeiT風)。
-- **テクニック:**
-    - **データ前処理:** 3Dランドマーク使用。アスペクト比推定と補正。主要な手のみ使用。使用ランドマーク（手、ポーズ、唇）。
-    - **Augmentation:** 時間反転、リサンプル、フレームブロックマスク、フレームノイズ、特徴マスク、アフィン変換（各部位に個別適用）、Temporal CutMix (CTC Segmentationに基づく時間アライメント利用)。
-    - **事前学習:** Data2vec 2.0をランドマークデータに適用（複数マスクパターン利用）。
-    - **学習:** LayerDrop。CutMix Augmentationが性能向上に大きく寄与。補助データはCutMix併用で効果あり。
-    - **Knowledge Distillation:** 事前学習済みTransformer Large (Teacher) からTransformer Small (Student) へ知識蒸留（Hard Label予測）。KD用とCTC用に別々のHeadを使用。
-    - **CV戦略:** 単純なHold-out (5%)。GroupKFoldはLBとの相関悪し。
+* **アプローチ:** Vanilla Transformer + Data2vec事前学習 + CTC + CutMix + KD。
+* **アーキテクチャ:** Vanilla Transformer Encoder (24層, 256次元) + Conv Stem + CTC Decoder。
+* **アルゴリズム:** CTCベース。
+* **テクニック:** **Data2vec 2.0**による事前学習。入力 手+ポーズ+唇 (3D)。アスペクト比補正 + **3D空間Augmentation** (Rotation, Shear, Scale, Shift)。**CTC SegmentationによるCutMix**。**知識蒸留** (Largeモデル → Smallモデル)。LayerDrop。RoPE。補助データ併用学習。
 
-**9位**
+**[9位](https://www.kaggle.com/competitions/asl-fingerspelling/discussion/434871)**
 
-- **アプローチ:** ASL Signコンペ1位解法ベースのConv1D+Transformer EncoderとCTC Decoder。長期学習と重み平均化。
-- **アーキテクチャ:** Encoder: Conv1DBlock (2 Conv1D) + TransformerBlock (6ブロック構成)。 Decoder: CTC。
-- **アルゴリズム:** CTC Loss。重み平均 (Weight Averaging)。
-- **テクニック:**
-    - **データ前処理:** RHAND, LHAND, LIP, POSE, REYE, LEYEのx, y, z座標。標準化。最大356フレーム。非手フレームのダウンサンプリング。
-    - **Augmentation:** フリップ、リサンプリング、回転、時間/空間マスキング、時間クロッピング、ノイズ、スケーリングなど重度Augmentation。
-    - **学習:** 長期学習 (500+エポック)。段階的にAugmentation導入。補助データ、外部データ（ChicagoWild/Plus）も利用。
-    - **モデルサイズ拡張:** 学習済みモデルの最終ブロックの重みをコピーして層数を増やし、再学習時間を短縮。
-    - **後処理:** Fill word置換（<30フレーム かつ 予測<=6文字の場合、固定文字列'+w1- ea-or'に置換）。
-    - **重み平均:** 最終数エポックのモデル重みを平均化。
-
+* **アプローチ:** Conv1D+Transformer Encoder + CTCアンサンブル。
+* **アーキテクチャ:** Stacked Conv1D + Transformer Blocks (6ブロック) + CTC Decoder。
+* **アルゴリズム:** CTCベース。
+* **テクニック:** 入力 手+唇+ポーズ+目。Max Frame 356。非手フレームのダウンサンプリング。Augmentation (Flip, Resample, Rotate, Masking, Noise, Scale)。補助データ/外部データ併用学習。複数エポック重み平均 (SWA風)。**モデルサイズ拡張** (学習済み最終層をコピーして層追加)。後処理 (短フレーム/短予測を定型句置換)。

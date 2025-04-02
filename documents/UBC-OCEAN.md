@@ -2,162 +2,208 @@
 tags:
   - Kaggle
   - 病理学
+  - ヘルスケア
+  - ViT
+  - EfficientNet
 startdate: 2023-10-07
 enddate: 2024-01-04
 ---
 # UBC Ovarian Cancer Subtype Classification and Outlier Detection (UBC-OCEAN)
-https://www.kaggle.com/competitions/UBC-OCEAN
+[https://www.kaggle.com/competitions/UBC-OCEAN](https://www.kaggle.com/competitions/UBC-OCEAN)
 
 **概要 (Overview)**
 
-* **目的:** このコンペティションの目的は、卵巣がん組織標本の**ホールスライド画像（Whole Slide Images - WSIs）**を用いて、がんの**サブタイプ（亜型）を分類**するとともに、まれなサブタイプや他の通常とは異なる症例を**「アウトライア（外れ値）」として検出**する機械学習モデルを開発することです。UBCはおそらくブリティッシュコロンビア大学、OCEANは関連する研究グループ（例: Ovarian Cancer Evidence-based Analysis Network）を示唆しています。
-* **背景:** 卵巣がんには複数のサブタイプが存在し、それぞれ予後や治療法が異なります。病理組織学的診断（WSIの観察）に基づく正確なサブタイプ分類は、患者ケアにとって極めて重要ですが、専門知識が必要であり、評価が主観的になることもあります。AIモデルは、病理医を支援し、より正確で一貫性のある分類を実現する可能性があります。また、まれなタイプや分類困難な症例を「アウトライア」としてフラグ立てすることで、専門家による詳細な検討を促すことができます。
-* **課題:** WSIはギガピクセル級の非常に巨大な画像であり、計算処理（メモリ、時間）の点で課題があります。サブタイプを区別する微細な形態学的特徴を捉えるには、高度な画像解析技術が必要です。染色やスキャンのばらつきへの対応も求められます。さらに、主要なサブタイプの分類に加えてアウトライア検出も行う必要があるため、単純な多クラス分類よりも複雑なタスクとなっています。
+* **目的:** このコンペティションの目的は、デジタル化された卵巣がんの生検サンプル画像（Whole Slide Images: WSI および Tissue Microarrays: TMA）を用いて、**卵巣がんの5つの主要なサブタイプ（HGSC, LGSC, EC, CC, MC）を分類**し、さらにそれ以外の**「その他」（良性腫瘍や正常組織など）を外れ値として検出**するモデルを開発することです。
+* **背景:** 卵巣がんは複数の組織学的サブタイプに分類され、それぞれ予後や治療法が異なります。正確なサブタイプ分類は個別化医療の実現に不可欠ですが、病理診断医による評価は主観性やばらつきを含む可能性があります。AIを用いた客観的かつ高精度な分類モデルは、診断の一貫性向上や効率化に貢献し、患者の治療成績改善につながることが期待されます。
+* **課題:** 提供される画像データは、非常に高解像度なWSIと、より小さなTMAの2種類が混在しており、それぞれの**スケールの違い**を考慮する必要があります。WSIは1枚あたり数万ピクセル四方に及ぶため、画像全体を直接モデルに入力することは計算資源的に困難であり、効率的な**タイリング（パッチ化）戦略**が必要です。また、TMAはトレーニングデータセットでは少数派であり、異なる倍率で撮影されている可能性があります。サブタイプ間の不均衡や、定義された5つのサブタイプ以外の症例（**外れ値**）を区別する必要がある点も課題でした。さらに、異なる施設からのデータ（マルチセントリックコホート）が含まれるため、染色やスキャナーの違いに対する**モデルの汎化性能**も重要でした。
 
 **データセットの形式 (Dataset Format)**
 
-提供される主なデータは、卵巣がん組織のWSIとそのラベル情報です。
+提供される主なデータは、WSI/TMA画像、サムネイル、ラベル、および一部のマスクデータです。
 
-1.  **ホールスライド画像 (WSI) データ (`train_images/`, `test_images/`):**
-    * 染色された卵巣がん組織標本をデジタルスキャンした非常に高解像度の画像データ。
-    * ファイル形式は、`.svs` (Aperio), `.tif` (汎用TIFF、ピラミッド構造を持つことが多い), `.ndpi` (Hamamatsu) といったWSI特有の形式が用いられることが一般的です。
-    * 画像サイズが非常に大きいため、扱うには特殊なライブラリ（例: OpenSlide）が必要になる場合があります。
-
-2.  **ラベルデータ (`train.csv` など):**
-    * トレーニングデータに含まれる各WSIに対応するラベル情報。CSV形式で提供されるのが一般的です。
-    * 列には通常、`image_id` (WSIの識別子)、そして**ターゲット変数**である卵巣がんのサブタイプ (`label`) が含まれます。ラベルは主要なサブタイプ（例: `HGSC` - 高悪性度漿液性がん, `CC` - 明細胞がん, `EC` - 類内膜がん, `LGSC` - 低悪性度漿液性がん, `MC` - 粘液性がん）および、まれなタイプや他の疾患を含む**`Other`** カテゴリ（これがアウトライアに相当）のいずれかとなります。
-
-3.  **(オプション) その他のデータ:**
-    * `train_thumbnails/`, `test_thumbnails/`: WSI全体の低解像度版（サムネイル）。視覚的な確認や、全体像を用いた分析に利用できます。
-    * `metadata.csv`: 患者の年齢など、追加の臨床情報が含まれる場合があります。
-
-4.  **テストデータ:**
-    * トレーニングデータと同様の形式のWSIデータ。ただし、ラベル情報は含まれません。
-    * `test.csv` のようなファイルで、予測対象となるWSIがリストアップされます。
-
-5.  **`sample_submission.csv`**:
-    * 提出フォーマットのサンプル。通常、`image_id` と、予測されたラベル（主要サブタイプまたは `Other`）の列を持ちます。確率の提出が求められる場合もあります。
+1.  **トレーニングデータ:**
+    * `train_images/`: 主要なトレーニングデータであるWSIおよびTMAの画像（PNG形式）。ファイル名に `_thumbnail` が含まれないものがフル解像度画像。
+    * `train_thumbnails/`: 上記画像のサムネイル版（低解像度画像、PNG形式）。組織領域の特定などに利用可能。
+    * `train.csv`: 各画像（`image_id`）に対応する情報。
+        * `image_id`: 画像の一意なID。
+        * `label`: 卵巣がんのサブタイプ（`HGSC`, `LGSC`, `EC`, `CC`, `MC` のいずれか）。
+        * `image_width`, `image_height`: フル解像度画像の幅と高さ。
+        * `is_tma`: 画像がTMAであるかを示すフラグ（True/False）。
+    * `train_tile_meta.csv`: 一部のWSI（`kidney_1`と`kidney_3`）について、腫瘍領域などを示すマスク情報に関連するタイルレベルのメタデータ（コンペ後半で追加）。
+    * `train_additional_source.csv`: 各画像のデータ提供元施設などの追加情報。
+    * `other_images/`: 「その他」クラスに分類される可能性のある画像（良性腫瘍など）のフォルダ。
+    * `other_labels.csv`: `other_images/` 内の画像のラベル（すべて `Other`）。
+    * （コンペ後半に追加）`train_masks/`: 一部のWSI（`kidney_1`と`kidney_3`）に対する腫瘍領域等のセグメンテーションマスク（PNG形式）。タイル選択や偽陽性領域の学習などに利用可能。
+2.  **テストデータ:**
+    * `test_images/`: 評価対象となるWSIおよびTMAの画像（PNG形式）。
+    * `test_thumbnails/`: 上記画像のサムネイル版。
+    * `test.csv`: テスト画像のIDリスト。ラベル情報は含まれない。
+3.  **外部データ:**
+    * The Cancer Imaging Archive (TCIA) の [Ovarian Bevacizumab Response](https://doi.org/10.7937/TCIA.985G-EY35) や [CPTAC-OV](https://doi.org/10.7937/TCIA.ZS4A-JD58)、[Hamarneh Labのデータセット](https://www.medicalimageanalysis.com/data/ovarian-carcinomas-histopathology-dataset)、[Stanford TMA Database](https://tma.im/cgi-bin/home.pl)、[proteinatlas.org](https://www.proteinatlas.org/) など、公開されている卵巣がん関連の病理画像データセットが、追加学習データや外れ値クラスのデータとして利用されました。
+4.  **`sample_submission.csv`**:
+    * 提出フォーマットのサンプル。`image_id` と、予測ラベル（`HGSC`, `LGSC`, `EC`, `CC`, `MC`, `Other` のいずれか）の列を持ちます。
 
 **評価指標 (Evaluation Metric)**
 
-* **指標:** **Balanced Accuracy Score (バランス精度スコア)**
-* **計算方法:** 各クラス（主要サブタイプ + 'Other'カテゴリ）ごとにリコール（Recall、再現率）を計算し、それらを単純平均します。
-    * Recall (クラス i) = (クラス i と正しく予測されたサンプル数) / (実際のクラス i の全サンプル数)
-    * Balanced Accuracy = (Σ Recall (クラス i)) / (総クラス数)
-* **意味:** Balanced Accuracyは、クラスごとのサンプル数（データセット内の頻度）の偏り（不均衡）の影響を受けにくい評価指標です。頻度の高いクラスでの高い正解率だけでなく、頻度の低いクラス（このコンペでは `Other` カテゴリやまれなサブタイプ）をどれだけ正しく識別できたかも平等に評価します。卵巣がんのサブタイプ分類やアウトライア検出のように、まれなケースの検出が臨床的に重要となる場合に特に適しています。スコアは0から1の範囲を取り、**高い**ほど全体的な分類性能（特に少数派クラスに対する性能）が良いことを示します。
-
-要約すると、UBC-OCEANコンペティションは、卵巣がんのWSIを用いて、主要なサブタイプ分類とアウトライア（`Other`カテゴリ）検出を行うマルチクラス分類タスクです。データは巨大なWSI画像とそのラベルで構成され、性能はクラス不均衡に配慮したバランス精度スコア（高いほど良い）によって評価されます。
+* **指標:** **バランス精度 (Balanced Accuracy)**
+* **計算方法:** 各クラス（6クラス: 5つのサブタイプ + Other）ごとにRecall（再現率、感度）を計算し、それらの単純平均を取ります。
+    * Recall_class = (クラスclassと正しく予測されたサンプル数) / (クラスclassの全サンプル数)
+    * Balanced Accuracy = (Recall_HGSC + Recall_LGSC + Recall_EC + Recall_CC + Recall_MC + Recall_Other) / 6
+* **意味:** 各クラスのサンプル数が不均衡な場合でも、各クラスに対する予測性能を平等に評価するための指標です。少数派クラス（例: `Other` や一部のサブタイプ）の予測精度も全体のスコアに等しく寄与します。スコアは**高い**ほど良い評価となります。
 
 ---
 
-**全体的な傾向:**
+**全体的な傾向**
 
-このコンペでは、卵巣がんのホールスライド画像（WSI）および組織マイクロアレイ（TMA）画像から、5つの主要な組織学的サブタイプ（HGSC, LGSC, EC, CC, MC）を分類し、さらにそれらに当てはまらない「Other」（正常組織や希少なサブタイプなど）を外れ値として検出することが課題です。データセットには解像度の異なるWSI（低解像度、広範囲）とTMA（高解像度、狭範囲）が含まれ、特に巨大なWSI画像を効率的に処理する必要がありました。
+このコンペティションは、高解像度のWSI/TMA画像を用いた卵巣がんサブタイプ分類と外れ値検出のタスクでした。WSIの巨大さから、多くの解法が**パッチベースのアプローチ**と**Multiple Instance Learning (MIL)** を採用しました。
 
-上位解法は、主に**Multiple Instance Learning (MIL)** のアプローチを採用しています。これは、画像を多数のタイル（パッチ）に分割し、各タイルの特徴量を抽出した後、それらを統合して画像全体の分類を行う手法です。特徴抽出には、**事前学習済みモデル**（特に病理画像用に訓練されたPhikon, Lunit-DINO, CTransPathなど）が広く利用されました。MILの集約モデルとしては、**Chowder, CLAM, ABMIL, DSMIL, TransMIL, Perceiver** などが使われています。
+**前処理**として、まず画像から組織領域を検出し（大津の二値化など）、それを多数の小さな**パッチ（タイル）**に分割します。WSIとTMAの**倍率の違い**（例: 20x vs 40x）を考慮し、TMAのパッチサイズを大きく取るか、画像をリサイズしてスケールを合わせる処理が一般的でした。また、計算効率のため、WSIからは全パッチではなく、ランダムサンプリングや腫瘍領域予測に基づいた**サンプリング**により一部のパッチ（数百〜数千）のみが使用されました。
 
-WSIとTMAの**解像度の違いに対処する工夫**（TMAのダウンサンプリング、個別のアプローチ）や、**効率的なタイリング**（組織領域の検出、PyVipsなどのライブラリ活用、カスタムコード）も重要でした。また、**外部データの活用**（特にTMAデータや"Other"クラスに相当するデータ）が精度向上に寄与した解法が多く見られます。**外れ値検出**には、予測確率の閾値処理、予測エントロピー、補助ラベルの利用、ArcFaceによる距離測定などが用いられました。**モデルのアンサンブル**は、安定性と精度向上のために広く採用されています。データ拡張（特にStain Augmentation）、クラス不均衡への対処（重み付きサンプリング、損失関数の重み付け）、疑似ラベリングなどのテクニックも活用されました。
+**特徴抽出**には、強力な**事前学習済みモデル**が不可欠でした。特に、組織病理学分野に特化した自己教師あり学習モデルである**Phikon**, **CTransPath**, **Lunit-DINO**, **PLIP** や、一般的な画像認識モデル (ConvNeXt, EfficientNet, Vision Transformer (ViT) など) がエンコーダーとして用いられ、各パッチから特徴ベクトルを抽出しました。
 
-**各解法の詳細:**
+抽出されたパッチ特徴量を集約して画像全体の分類を行う**MILモデル**としては、古典的な**Chowder**, **DeepMIL**, **ABMIL** から、比較的新しい**TransMIL**, **DSMIL**, **DTFD-MIL**, **Perceiver**、さらにはAttentionベースの**CLAM**などが使用されました。これらのMILモデルを複数組み合わせた**アンサンブル**が一般的でした。
 
-**1位**
+**外れ値（`Other`クラス）検出**は、評価指標であるバランス精度を向上させる上で重要でした。分類モデルの出力確率の**エントロピー**や**最大確率値**、あるいは**ArcFace**のような距離学習ベースの手法を用いて、予測の不確実性が高いサンプルや既知のサブタイプから距離が遠いサンプルを `Other` と判定する戦略が取られました。外部データセットから正常組織や良性腫瘍の画像を追加学習データとして利用するアプローチもありました。
 
-- **アプローチ:** Owkinの病理学用基盤モデルPhikonで抽出したタイル特徴量上で、MILモデルChowderのアンサンブルを訓練。予測エントロピーで外れ値検出。外部データ不使用。
-- **アーキテクチャ:** Phikon (ViT-Base), Chowder (MIL)。
-- **アルゴリズム:** Otsu thresholding (組織検出), AdamW, CrossEntropyLoss, WeightedRandomSampler, Prediction Entropy (外れ値検出)。
-- **テクニック:**
-    - **データ準備:** 組織検出(Otsu)、WSI/TMAの解像度統一（TMAを448pxでタイリング後224pxにリサイズ）、TMA検出(ResNet18+LR)、効率的なタイリング(カスタムCコード+libpng)、並列処理(Ray)。
-    - **モデリング:** Phikonで特徴抽出、Chowderアンサンブル(N=50)、クラス不均衡対策(重み付きサンプリング、クラス重み付きCE損失)。
-    - **推論/後処理:** 複数Fold/Seedから選択した65モデルの平均予測、LRによるキャリブレーション、モデルフィルタリング、予測エントロピー閾値による外れ値検出(LBで閾値調整)。成功した別アイデア：Phikonファインチューニング、予測分散による外れ値検出。
+**データ拡張**としては、標準的なフリップ、回転、スケール、色調変化などに加え、組織病理画像特有の**染色正規化 (Stain Normalization)** や染色拡張 (Stain Augmentation) も試されましたが、必ずしも効果的ではなかったようです。
 
-**2位**
+**交差検証 (CV)** はデータセットの偏り（特定の施設やサブタイプの偏在）のため難しく、Public/Private LBとの相関が低い場合もありました。層化K分割（Stratified KFold）などが用いられましたが、信頼性の高いCV戦略の構築が課題でした。
 
-- **アプローチ:** 標準的なMILパイプライン。複数の特徴抽出器(Lunit-DINO)とMILモデル(ABMIL, DSMIL, TransMIL)を試行・組み合わせ。
-- **アーキテクチャ:** Lunit-DINO (ViT-small patch16/patch8), ABMIL, DSMIL, TransMIL。
-- **アルゴリズム:** (詳細な言及なし)。
-- **テクニック:**
-    - **データ準備:** WSI/TMAごとにDataset作成(pyvips使用)、WSIサムネイルから組織領域を推定しタイル座標リスト作成、WSIサイズに応じてタイルサンプリング率調整(R_ratio)。
-    - **モデリング:** 2種の特徴抽出器と3種のMILモデルの組み合わせ。
-    - **推論/後処理:** (詳細な言及なし)。外部データ使用(効果薄と判断)。
+**各解法の詳細**
 
-**3位**
+**[1位](https://www.kaggle.com/competitions/UBC-OCEAN/discussion/466455)**
 
-- **アプローチ:** 外部データの積極的な活用と、提供されたセグメンテーションマスクを用いた合成TMA画像生成。Lunit-DINO特徴抽出器とCLAMモデル(AttentionベースMIL)を使用。
-- **アーキテクチャ:** Lunit-DINO, CLAM。
-- **アルゴリズム:** Attention mechanism (CLAM), Instance-level loss (CLAM)。
-- **テクニック:**
-    - **データ準備:** 複数ソースから外部データ収集、合成TMA画像生成(癌組織タイル + 健常/間質タイルを"Other"として)、PyVipsと非同期ローディングでタイル処理。
-    - **モデリング:** Lunit-DINOで特徴抽出(16bit精度)、CLAMモデル訓練("Other"ラベル用にインスタンスレベル損失を修正)。
-    - **推論/後処理:** (詳細な言及なし)。5-Fold CV、患者単位でのFold分割、特定データセットを除外した検証。
+* **アプローチ:** 病理組織用Foundation Model「Phikon」でパッチ特徴量を抽出し、MILモデル「Chowder」のアンサンブルで分類。予測エントロピーで外れ値を検出。
+* **アーキテクチャ:** Backbone: Phikon (ViT-Base)。MIL: Chowder。
+* **アルゴリズム:** Cross-Entropy Loss。AdamW。Weighted Sampling（クラス均衡化）。
+* **テクニック:**
+    * **前処理:** Otsuの二値化（HSV空間）で組織検出。TMAはパッチサイズを倍（448px）にし、224pxにリサイズしてWSI（224pxパッチ）とスケールを合わせる。WSIは200パッチに制限。C言語+libpngで高速タイリング。Rayで並列処理。
+    * **特徴抽出:** Phikonを使用。他のバックボーン（CTransPath, LUNIT, DinoV2）より高性能。
+    * **分類:** Chowderモデルを異なる初期値で50個学習しアンサンブル（安定性と効率性向上）。特定のFold/Seedのモデルを選択して最終アンサンブル（65モデル）。ロジスティック回帰で予測確率をキャリブレーション後、性能に基づいてモデルを選択。
+    * **外れ値検出:** 予測確率のエントロピーに閾値を設け、高エントロピーのサンプルを`Other`と分類。閾値はPublic LBで調整。
+    * **その他:** PhikonをiBOTで追加学習（Fine-tuning）したモデルや、予測の分散を用いた外れ値検出も有効だったが最終提出には含まず。染色正規化は効果なし。
 
-**4位**
+**[2位](https://www.kaggle.com/competitions/UBC-OCEAN/discussion/465410)**
 
-- **アプローチ:** セグメンテーションモデルによるタイル選択と、タイル分類モデルによるスコア予測の2段階構成。WSIとTMAで一部処理を分ける。
-- **アーキテクチャ:** ConvNeXt, Hornet, EfficientNetV1/V2 (分類器バックボーン), Segmentation model。
-- **アルゴリズム:** Binary CrossEntropy (BCE), Sigmoid activation。
-- **テクニック:**
-    - **データ準備:** TMAは中央クロップ＆リサイズ(768x768)。WSIはセグメンテーションモデルで癌確率が高い領域をクロップ＆リサイズ(1536x1536 -> 768x768)。問題のあるサムネイルは再生成。
-    - **モデリング:** 16個の分類モデルアンサンブル(5クラス+非癌クラスの6クラス分類)、データ拡張(Stain augmentation含む)。
-    - **推論/後処理:** 予測スコアの中央値でアンサンブル、低スコア(<0.05)または下位%タイルを"Other"と判定。GPU分散。外部データ不使用。
+* **アプローチ:** パッチ特徴量抽出 + MILモデル (ABMIL, DSMIL, TransMIL) のアンサンブル。外部データを利用。
+* **アーキテクチャ:** Backbone: Lunit-DINO (ViT-Small, patch16 & patch8)。MIL: ABMIL, DSMIL, TransMIL。
+* **アルゴリズム:** Cross-Entropy Loss?
+* **テクニック:**
+    * **データ:** TCIA (PTRC-HGSOC) およびポーランドの公開データセットを利用。外部データの効果は限定的と評価。
+    * **前処理:** PyVipsで画像読み込み。TMAはそのまま、WSIはサムネイルで組織検出し、パッチサイズ分の領域を切り出し。WSIからはサイズに応じてサンプリング率を変更してパッチを抽出（最大80%〜最小50%）。
+    * **特徴抽出:** Lunit-DINOのViT-S/16とViT-S/8を使用。
+    * **分類:** ABMIL, DSMIL, TransMILの3種類のMILモデルを学習。
+    * **アンサンブル:** 複数のバックボーンとMILモデルの組み合わせでアンサンブル。
 
-**5位**
+**[3位](https://www.kaggle.com/competitions/UBC-OCEAN/discussion/465527)**
 
-- **アプローチ:** WSI用のタイル選択セグメンテーションモデルと、タイル分類モデルを用いた2段階推論。外部データとデータマイニング(疑似ラベリング)を活用。
-- **アーキテクチャ:** ConvNeXt-base/large, EVA (分類器バックボーン), SEResNeXt101 UNet (セグメンテーション)。
-- **アルゴリズム:** RandAugment, Stain Normalization (StainNorm), Pseudo-labeling。
-- **テクニック:**
-    - **データ準備:** ランダムクロップ(1536x1536)、TMAは中央クロップ＆リサイズ。
-    - **モデリング:** タイル選択モデル(補助モデル予測を組み合わせたヒートマップ教師ラベルでUNet訓練)、分類モデル(WSIラベルをタイルラベルに使用、外部データを"Other"として利用、データマイニングで疑似ラベル生成し2段階訓練)、データ拡張(StainNorm含む)。
-    - **推論/後処理:** WSIは選択されたTop5タイルの予測平均、TMAは中央クロップタイルの予測、TTAとしてStainNorm使用。
+* **アプローチ:** 外部データと、提供されたマスク情報から生成した合成TMA画像を活用。Lunit-DINO特徴量 + CLAMモデル。
+* **アーキテクチャ:** Backbone: Lunit-DINO。MIL: CLAM (Attentionベース)。
+* **アルゴリズム:** CLAM Loss (Bag Loss + Instance Loss)。
+* **テクニック:**
+    * **データ:** TCIA (Bevacizumab Response, CPTAC-OV) やHamarneh Lab、Stanford TMA Databaseなどの外部データを収集。ラベルマッピングに工夫（例: Papillary Serousは学習済みモデルでHGSC/LGSCに再分類）。提供マスクから腫瘍領域をクロップし合成TMA画像を生成。正常/間質領域から`Other`の合成画像も生成。
+    * **前処理:** PyVipsで組織領域をタイリング。16bitで特徴量抽出し高速化。
+    * **特徴抽出:** Lunit-DINO (ViT-S/16?)。
+    * **分類:** CLAMモデルを使用。Instance Loss部分を`Other`クラスを考慮して変更（`Other`クラスやTMAの場合は負例に対する損失を考慮しないなど）。
+    * **検証:** 外部データを除いたデータで5-Fold CV。
 
-**6位**
+**[4位](https://www.kaggle.com/competitions/UBC-OCEAN/discussion/465811)**
 
-- **アプローチ:** iBOT事前学習済みViT-Base特徴抽出器とChowderモデル(MIL)のアンサンブル。予測エントロピーによる外れ値検出。
-- **アーキテクチャ:** iBOT-ViT-Base, Chowder。
-- **アルゴリズム:** Prediction Entropy (外れ値検出)。
-- **テクニック:**
-    - **データ準備:** WSI/TMAからランダムに1000パッチ選択。
-    - **モデリング:** iBOT-ViT-Baseで特徴抽出、Chowderモデル訓練。
-    - **推論/後処理:** 7つのChowderモデルのアンサンブル、予測の平均エントロピーで"Other"検出（閾値調整）。
+* **アプローチ:** セグメンテーションモデルでタイル選択 + 分類モデル。WSIとTMAで異なる処理。
+* **アーキテクチャ:**
+    * タイル選択 (WSI): セグメンテーションモデル（U-Net系?）。
+    * 分類: ConvNeXt, Hornet, EfficientNetV1/V2。
+* **アルゴリズム:** 分類: Sigmoid出力 + Binary Cross Entropy Loss。
+* **テクニック:**
+    * **TMA処理:** 中央クロップ（例: 3000->2500）後、768x768にリサイズ。
+    * **WSI処理:** サムネイル画像で学習したセグメンテーションモデルでタイル選択。最も癌らしい確率が高いピクセル位置周辺の1536x1536領域をクロップし、768x768にリサイズして分類モデルに入力。
+    * **分類:** 5つのサブタイプ + 非がん (`Other`相当) の6クラス分類として学習（マスクデータ利用）。Sigmoid活性化関数を使用。
+    * **Augmentation:** Stain Augmentation、幾何学的変換、色調変化、Channel Shuffleなど。
+    * **アンサンブル:** 16個の異なるバックボーンの分類モデル予測を中央値でアンサンブル。
+    * **外れ値検出:** 予測確率の最大値が低い (< 0.05) または予測確率が下位5-10%のものを`Other`と分類。
+    * **その他:** 問題のあるサムネイル画像（複数のスライスが並んでいる等）を検出し、WSIから再生成。
 
-**7位**
+**[5位](https://www.kaggle.com/competitions/UBC-OCEAN/discussion/466017)**
 
-- **アプローチ:** MILベース。CTransPath/LunitDINO特徴抽出器とDSMIL/Perceiver分類器の組み合わせ。Sigmoid出力の閾値処理または確率エントロピーで外れ値検出。
-- **アーキテクチャ:** CTransPath, LunitDINO, DSMIL, Perceiver, pyvips。
-- **アルゴリズム:** CrossEntropyLoss (DSMIL), BCEWithLogitsLoss (Perceiver), Mixup, Label Smoothing, Prediction Entropy (外れ値検出)。
-- **テクニック:**
-    - **データ準備:** pyvips使用、x10解像度にダウンサンプリング、WSIの重複領域除去、タイリング(256x256)。
-    - **モデリング:** 2種の特徴抽出器と2種のMIL分類器の組み合わせ。PerceiverでMixupとLabel Smoothing使用。
-    - **推論/後処理:** 4モデルのアンサンブル。外れ値検出(最大予測確率<0.4 or 予測確率エントロピー>閾値)。外部データ不使用。
+* **アプローチ:** WSIに対してはタイル選択モデル（セグメンテーションベース）+ 分類モデル、TMAは中央クロップ+分類モデル。外部データを`Other`クラスとして利用。データマイニング（疑似ラベル）実施。
+* **アーキテクチャ:**
+    * タイル分類補助: ConvNeXt-base。
+    * 腫瘍セグメンテーション補助: SEResNeXt101 U-Net。
+    * タイル選択（推論用）: SEResNeXt101 U-Net。
+    * 分類（推論用）: ConvNeXt-base/large, EVA。
+* **アルゴリズム:** 分類: Cross Entropy Loss? データマイニング使用。
+* **テクニック:**
+    * **WSIタイル選択:** 2段階の補助モデルを経て、最終的なタイル選択用セグメンテーションモデルを学習。1) 全前景タイルで学習した分類モデル予測と、2) マスクデータで学習した腫瘍セグメンテーションモデル予測を組み合わせてヒートマップを作成し、それを教師として最終セグメンテーションモデルを学習。推論時はこのヒートマップの上位5タイルを選択。
+    * **TMA処理:** 中央クロップ (3072x3072) 後、1536x1536にリサイズ。
+    * **分類モデル学習:** 外部データ (Hubmap, Camelyonなど) を`Other`クラスとして追加。データマイニング（Round 1予測に基づき、低確信度タイルを`Other`疑似ラベル、高確信度タイルをWSIラベル疑似ラベルとしてRound 2学習）。
+    * **Augmentation:** RandAugment, StainNormなど。
+    * **アンサンブル:** ConvNeXt-base, ConvNeXt-large, EVAモデルのアンサンブル。
+    * **TTA:** StainNorm TTA。
 
-**8位**
+**[6位](https://www.kaggle.com/competitions/UBC-OCEAN/discussion/465379)**
 
-- **アプローチ:** WSIとTMAを完全に分離。TMAはパッチ分類+ArcFace検索、WSIはMIL(DTFD-MIL)。TMA用モデルをWSIの特徴抽出器として活用。
-- **アーキテクチャ:** EfficientNetV2 (s/l), ConvNeXt (small/large), ArcFace head, DTFD-MIL。
-- **アルゴリズム:** ArcFace retrieval, DTFD-MIL。
-- **テクニック:**
-    - **データ準備:** TMAは公式マスクでタイリング、WSIはタイル抽出(複数解像度)。TMAをダウンサンプリングしWSIとスケール統一。
-    - **モデリング(TMA):** パッチ分類器訓練(5クラス+"Other")、疑似ラベル生成、ArcFaceモデル訓練。
-    - **モデリング(WSI):** TMA用モデルを特徴抽出器として使用、"Other"パッチプール作成、DTFD-MIL訓練時に"Other" WSIを動的合成。
-    - **推論(TMA):** ArcFace検索 -> 6クラス分類アンサンブル。
-    - **推論(WSI):** 複数解像度の特徴抽出器+DTFD-MILアンサンブル。マルチスレッド処理。
+* **アプローチ:** iBOT-ViT-Base特徴量 + MILモデル (Chowder)。予測エントロピーによる外れ値検出。
+* **アーキテクチャ:** Backbone: iBOT-ViT-Base。MIL: Chowder。
+* **アルゴリズム:** Cross Entropy Loss?
+* **テクニック:**
+    * **前処理:** WSI/TMAからランダムに1000パッチをサンプリング（不足時はコピー）。
+    * **特徴抽出:** OwkinのiBOT-ViT-Baseを使用。
+    * **分類:** Chowderモデルを使用。
+    * **アンサンブル:** 7つの異なる学習済みChowderモデルをアンサンブル。
+    * **外れ値検出:** アンサンブル予測確率の平均エントロピーを計算し、閾値で`Other`を判定。
+    * **その他:** パッチ選択法の重要性を指摘（ただし本解法ではランダム選択）。
 
-**9位**
+**[7位](https://www.kaggle.com/competitions/UBC-OCEAN/discussion/465697)**
 
-- **アプローチ:** WSI/TMA識別と個別タイル化戦略。タイルベース分類。補助ラベルを用いた3段階訓練。
-- **アーキテクチャ:** EfficientNetB4, EfficientNetV2s, MaxViT-tiny。
-- **アルゴリズム:** Binary CrossEntropy (BCE)。
-- **テクニック:**
-    - **データ準備:** WSI/TMA識別(サイズと黒ピクセル率)、WSIタイル化(0.33倍リサイズ後512x512、不良ピクセル率で段階的サンプリング)、TMAタイル化(中央クロップ後512x512リサイズ)。
-    - **モデリング:** WSIタイルのみ使用、バッチ内でタイルランダム選択、3段階訓練(通常訓練→補助ラベル生成＆再訓練→Fine-tuning)。
-    - **推論/後処理:** WSIはタイル予測アンサンブル、TMAはリサイズ後予測、外れ値検出(補助ラベル予測平均<0.5)、Votingアンサンブル。外部データ不使用。
+* **アプローチ:** CTransPath/LunitDINO特徴量 + MILモデル (DSMIL, Perceiver) のアンサンブル。BCEベースの外れ値検出。
+* **アーキテクチャ:** Backbone: CTransPath, LunitDINO (ViT-S/16?)。MIL: DSMIL, Perceiver。
+* **アルゴリズム:** DSMIL: CrossEntropyLoss。Perceiver: BCEWithLogitsLoss (+ Mixup, Label Smoothing)。
+* **テクニック:**
+    * **前処理:** PyVips使用。WSI/TMAを10x相当にダウンサンプリング。WSIは重複領域を除去。非重複Sliding Windowで256x256パッチ生成。
+    * **特徴抽出:** CTransPathとLunitDINOを使用。
+    * **分類:** DSMILとPerceiverを使用。
+    * **外れ値検出:** BCEWithLogitsLossで学習し、最大確率値が閾値 (0.4) 未満の場合、または予測確率のエントロピーが閾値より大きい場合に`Other`と判定する2つの方法を試し、両方ともPrivate 0.6を達成。
+    * **アンサンブル:** 4つの組み合わせ（2 Backbone x 2 MIL）のモデルをアンサンブル。
 
-**10位**
+**[8位](https://www.kaggle.com/competitions/UBC-OCEAN/discussion/465382)**
 
-- **アプローチ:** 外部TMAデータと強力なラベルを活用したタイルベース分類。WSI用にセグメンテーションモデルを利用。
-- **アーキテクチャ:** EfficientNetV2-small, MaxViT-Tiny FPN (セグメンテーション)。
-- **アルゴリズム:** CrossEntropyLoss (重み付き), AdamW, CosineAnnealingLR。
-- **テクニック:**
-    - **データ準備:** WSI用にセグメンテーションモデル訓練、マスクに基づきTop16タイル選択(1024x1024)。TMAは白領域除去。外部データ多数活用。
-    - **モデリング:** EfficientNetV2-small訓練、豊富なデータ拡張。
-    - **推論/後処理:** 5-Foldアンサンブル、3x TTA、WSIは16タイルの予測平均。
+* **アプローチ:** WSIとTMAを完全に別のアプローチで処理。TMAはArcFace + 分類器アンサンブル、WSIはTMA学習済み特徴抽出器 + DTFD-MIL。合成`Other`データ。
+* **アーキテクチャ:**
+    * TMA分類: EfficientNetV2-s/l, ConvNeXt-small/large。ArcFaceヘッドも使用。
+    * WSI特徴抽出: TMA学習済み EffNetV2-s, ConvNeXt-small。
+    * WSI分類: DTFD-MIL。
+* **アルゴリズム:** TMA分類: Cross Entropy Loss? ArcFace Loss? WSI分類: DTFD-MIL Loss?
+* **テクニック:**
+    * **スケール統一:** TMAを2倍ダウンサンプリングし、WSIと物理スケールを合わせる。
+    * **TMA処理:** マスクを利用してパッチをタイリング。正常/壊死パッチを`Other`として学習。ArcFaceで既知TMAとの類似度を計算し、近いものはラベルを割り当て、遠いものは外れ値候補に。残りを分類器アンサンブル（6モデル）で予測。
+    * **WSI処理:** TMAパイプラインで学習したモデルを特徴抽出器として使用。抽出した特徴量でDTFD-MILを学習。学習中に、高`Other`確率パッチプールから動的に`Other` WSIを合成して追加。異なる解像度（768, 1024）のモデルをアンサンブル。
+    * **高速化:** WSI処理を高速化するため、ピクセル数でソートしマルチスレッド処理。推論時はタイルの中心領域のみ使用。
+
+**[9位](https://www.kaggle.com/competitions/UBC-OCEAN/discussion/465815)**
+
+* **アプローチ:** WSIとTMAで異なるスケール処理。シンプルなWSIタイル選択（bg_countに基づく）と分類。補助ラベルを用いた2段階学習。
+* **アーキテクチャ:** EfficientNet-b4, EfficientNet-v2s, MaxViT-tiny。
+* **アルゴリズム:** Binary Cross Entropy (BCE)。補助ラベル損失を追加。
+* **テクニック:**
+    * **WSI/TMA分割:** 画像サイズと黒ピクセル比率で判定。
+    * **WSI前処理:** 0.33倍にリサイズ後、512x512タイルに分割。タイルの背景ピクセル比率 (`bg_count/area`) に基づき3段階でタイルを選択（低背景比率を優先しつつ、最低枚数を確保）。
+    * **TMA前処理:** TMAをクロップ（低標準偏差の境界を除去）後、512x512にリサイズ。
+    * **学習:** WSIタイルのみ使用。バッチごとに画像から6タイルをランダム選択。2段階学習：Step 1で通常学習→Step 2でStep 1予測を補助ラベル（高確信度予測を使用）として追加損失に加え、より低いLRで再学習。
+    * **推論 (WSI):** 学習済みモデルで全タイル予測。タイル予測値の最大値を持つクラスをWSI予測とする？（`idxmax()`を使用）。
+    * **推論 (TMA):** WSI用モデルをそのまま適用。
+    * **外れ値検出:** 補助ラベルの平均予測値が閾値未満の場合に`Other`と判定。
+    * **アンサンブル:** 3つのバックボーンのモデル予測をVoting。
+
+**[10位](https://www.kaggle.com/competitions/UBC-OCEAN/discussion/465455)**
+
+* **アプローチ:** 外部TMAデータセットを多用。シンプルなEfficientNetV2-small + 分類ヘッド。セグメンテーションモデルによるWSIクロップ選択。
+* **アーキテクチャ:** Backbone: EfficientNetV2-small。セグメンテーション: MaxViT-Tiny FPN。
+* **アルゴリズム:** CrossEntropyLoss (クラス重み付き)。AdamW + Cosine Annealing LR。
+* **テクニック:**
+    * **データ:** 多数の外部TMAデータセット（Stanford TMA DB, kztymsrjx9, tissuearray.com, usbiolab.com, proteinatlas.org）を追加。UBCコンペのPublicテストのHGSC確信度が高い画像も追加。
+    * **WSI前処理:** サムネイルで学習したセグメンテーションモデルでマスク予測。マスク領域に基づいて上位16個の1024x1024クロップを抽出。
+    * **TMA前処理:** 低標準偏差の行/列を除去して白い背景を削除。
+    * **学習:** WSIクロップとTMAを混合学習。クラス重み（`n / n_i`）を使用。AMP使用。15 epochs。
+    * **Augmentation:** TMAは1024にリサイズ。倍率正規化（WSIを512に縮小後1024に戻す）、幾何学的変換、Color Jitter, Channel Shuffle, Blur, Coarse Dropout。
+    * **推論:** 5 Foldモデルの平均。3x TTA（フリップ）。WSIは16クロップの予測を平均。
+    * **その他:** 初期のOOFスコアは高かった(0.867)がLBスコアが低かった(0.47)ため、外部データを追加する方向に転換。LBスコアを信頼し、最もLBスコアが高かった提出を選択。

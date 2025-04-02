@@ -1,173 +1,201 @@
 ---
 tags:
   - Kaggle
-  - 強化学習
-  - ゲームAI
+  - MCTS
+  - LightGBM
+  - DeepTables
+  - RMSE
+  - DeBERTa
 startdate: 2024-09-06
 enddate: 2024-12-03
 ---
 # UM - Game-Playing Strength of MCTS Variants
-https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants
+[https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants](https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants)
 
 **概要 (Overview)**
 
-* **目的:** このコンペティションの目的は、特定のゲーム（例: Hexなどのボードゲーム）において、**モンテカルロ木探索（Monte Carlo Tree Search - MCTS）**アルゴリズムの様々な**バリアント（変種）やパラメータ設定**が持つ**ゲームプレイの強さ**（例: Eloレーティングや勝率）を予測するモデルを開発することです。"UM" はおそらく主催する大学（例: University of Michigan, University of Maastricht など）を示唆しています。
-* **背景:** MCTSは、AlphaGoなどの成功例で知られるように、ゲームAIにおいて非常に強力な探索アルゴリズムです。しかし、MCTSの性能は、探索定数（Cパラメータ）、シミュレーション回数、選択・展開・シミュレーション・バックプロパゲーションの各フェーズで用いる戦略など、多くの要因（パラメータや構造のバリエーション）に依存します。これらのバリアントがゲームプレイの強さにどのように影響するかを理解することは、より強力なゲームAIを設計する上で重要です。このコンペティションは、おそらく異なるMCTSバリアント同士や特定の対戦相手と多数のゲームをプレイさせたシミュレーション結果のデータを提供し、その強さを予測させます。
-* **課題:** MCTSのパラメータや構造とその結果としての強さの関係は、複雑で非線形であり、対象となるゲームによっても異なる可能性があります。また、MCTSやゲーム結果の確率的な性質により、観測される強さのデータにはノイズが含まれる可能性があります。与えられたMCTSの構成情報（特徴量）から、その強さ（目的変数）を正確に予測するモデルを構築することが課題となります。タスクは**回帰問題**です。
+* **目的:** このコンペティションの目的は、様々なルールを持つボードゲームにおいて、異なる構成（パラメータ）を持つ2つの**モンテカルロ木探索（Monte Carlo Tree Search, MCTS）**エージェントが対戦した場合の**勝敗結果（エージェント1から見た期待効用値）を予測**する回帰モデルを開発することです。
+* **背景:** MCTSは、囲碁AI「AlphaGo」などで知られるように、完全情報ゲームにおいて非常に強力な探索アルゴリズムです。しかし、その性能は選択戦略（UCB1など）、探索定数、プレイアウト戦略（ランダム、N-Gramなど）、スコア境界の扱いといった様々なパラメータ設定や、ゲーム自体の特性（複雑さ、引き分けやすさなど）に大きく依存します。事前にMCTSのバリアント間の強さを予測できれば、特定のゲームに最適なアルゴリズム構成の選択や、アルゴリズム自体の改善に繋がる可能性があります。
+* **課題:** 多種多様なゲームルール（汎用ゲームシステムLudiiで記述）と、多数のMCTSパラメータの組み合わせに対して、対戦結果を予測する必要があります。入力として、ゲームルールテキスト、MCTSエージェントの構成文字列、および事前計算されたゲーム特性（ランダムプレイ時の勝率やゲームの複雑性など）が与えられます。これらの異種混合データから、実際のMCTSエージェント間の勝敗に関わる特徴量を抽出し、-1（敗北）から1（勝利）の間の連続値を予測する回帰問題です。特に、テキスト形式のゲームルールやカテゴリ的なエージェント構成をどのように効果的にモデルに取り込むかが課題となりました。
 
 **データセットの形式 (Dataset Format)**
 
-提供される主なデータは、MCTSのシミュレーション結果をまとめた表形式データです。
+提供される主なデータは、ゲームルール、エージェント構成、ゲーム特性、および対戦結果です。
 
-1.  **トレーニングデータ (`train.csv` など):**
-    * 各行が特定のMCTSバリアントまたはその設定に対応します。通常、CSV形式で提供されます。
-    * 列には以下が含まれます。
-        * **入力特徴量:** MCTSバリアントを定義するパラメータ。
-            * 例: `exploration_constant` (探索定数 C), `num_simulations` (思考ごとのシミュレーション回数), `uct_variant` (UCT式の種類), `simulation_strategy` (プレイアウト戦略), `game` (対象ゲーム名) など。
-        * **ターゲット変数:** そのMCTSバリアントの測定されたゲームプレイの強さ。
-            * 例: `elo_rating` (多数の対局から推定されたEloレーティング), `win_rate` (特定の相手に対する勝率) など。
-
-2.  **テストデータ (`test.csv` など):**
-    * トレーニングデータと同様にMCTSバリアントを定義するパラメータを含みますが、ターゲット変数（ゲームプレイの強さ）は含まれません。
-    * 参加者は、このテストデータに含まれるバリアントに対して強さを予測します。
-
+1.  **`train.csv`, `test.csv`**:
+    * 各行が特定のゲームにおける特定のMCTSエージェントペアの対戦結果（または予測対象）を示します。
+    * `Id`: 各データ行の一意なID。
+    * `GameRulesetName`: ゲームルールセットの名前（例: `Breakthrough.lud`）。
+    * `agent1`, `agent2`: 対戦する2つのMCTSエージェントの構成を示す文字列。形式は `MCTS-<selection>-<exploration_const>-<playout>-<score_bounds>`（例: `MCTS-UCB1Tuned-0.6-Random-true`）。
+    * `utility_agent1`: **ターゲット変数**。エージェント1から見た期待効用値。複数回の対戦結果（勝利: +1, 引き分け: 0, 敗北: -1）の平均値で、-1から1の間の連続値。
+    * `LudRules`: Ludiiシステムで解釈される形式のゲームルールテキスト。
+    * `EnglishRules`: 自然言語（英語）で記述されたゲームルールテキスト。
+    * **ゲーム特性特徴量:** ランダムプレイシミュレーション等に基づいて計算された多数の特徴量。
+        * `AdvantageP1`: ランダムプレイにおけるプレイヤー1の有利さ（勝率 - 敗率）。
+        * `Balance`: ゲームのバランス（(勝率1 + 勝率2)/2）。
+        * `Completion`: ゲームが終了する確率。
+        * `Drawishness`: 引き分けになる確率。
+        * `StateTreeComplexity`, `GameTreeComplexity`: ゲームの複雑性指標。
+        * など、多数。
+    * **エージェント性能特徴量:** 対戦シミュレーション時のエージェントの探索効率などを示す特徴量。
+        * `MovesPerSecond`, `PlayoutsPerSecond`: 1秒あたりの着手数、プレイアウト数。
+        * `DurationActions`, `DurationTurns`, `DurationTurnsStdDev`: 行動やターンの持続時間に関する統計量。
+        * `Timeouts`: タイムアウト発生回数。
+        * など、多数。
+2.  **外部データ / 生成データ:**
+    * 一部の参加者は、GAVELアルゴリズムやLLMを用いて**新しいゲームルールセットを生成**し、それらに対してMCTSエージェントの対戦シミュレーションを実行して**追加の学習データを生成**しました。
 3.  **`sample_submission.csv`**:
-    * 提出フォーマットのサンプル。通常、テストデータの各バリアントに対応する `id` と、予測された強さ (`elo_rating` など) の列を持ちます。
+    * 提出フォーマットのサンプル。`Id`と予測値`utility_agent1`の列を持ちます。
 
 **評価指標 (Evaluation Metric)**
 
-* **指標:** **Root Mean Squared Error (RMSE) (二乗平均平方根誤差)**
-* **計算方法:** RMSE = √ [ Σ (実際の強さ - 予測された強さ)² / N ]
-    （Σは全テストサンプルにわたる合計、Nはテストサンプル数）
-* **意味:** RMSEは、予測値が実際の値から平均してどれだけずれているかの大きさ（誤差の標準偏差のようなもの）を示す、回帰問題で標準的に用いられる指標です。このコンペティションでは、モデルが予測したMCTSバリアントの強さと、シミュレーションによって測定された実際の強さとの間の平均的な誤差を（強さと同じ単位、例: Eloポイントで）評価します。RMSEの値が**小さい**ほど、モデルの予測がより正確であることを意味します。
-
-要約すると、UMコンペティションは、MCTSアルゴリズムの様々な設定（パラメータやバリアント）が、特定のゲームにおいてどの程度の強さを発揮するかを予測する回帰タスクです。データはMCTSの構成とそのシミュレーション結果（強さ）をまとめた表形式であり、性能は予測された強さと実際の強さとの間のRMSE（小さいほど良い）によって評価されます。
+* **指標:** **RMSE (Root Mean Squared Error, 二乗平均平方根誤差)**
+* **計算方法:** モデルが予測した`utility_agent1`の値と、実際の（隠された）`utility_agent1`の値との間の二乗誤差を計算し、その平均値の平方根を取ります。
+    * RMSE = √ [ (1/N) * Σ (予測値_i - 真の値_i)² ]
+* **意味:** 予測値と真の値の間の平均的な誤差の大きさを測る標準的な回帰指標です。誤差の二乗を平均するため、大きな誤差の影響をより強く受けます。スコアは**低い**ほど、モデルの予測精度が高いことを示します。
 
 ---
 
-**全体的な傾向:**
+**全体的な傾向**
 
-このコンペでは、モンテカルロ木探索（MCTS）の変種のゲームプレイングの強さを予測することが課題です。上位解法は、主に古典的な機械学習モデル（CatBoost、LightGBM、TabM、線形回帰）と、ニューラルネットワーク（MLP、DeepTables）のアンサンブルを使用しています。特徴量エンジニアリングが非常に重要であり、ゲームのルールセットから抽出される特徴量や、MCTSのシミュレーション結果から得られる特徴量などが活用されています。データ拡張も一部で試みられています。
+このMCTSエージェントの強さ予測タスクでは、表形式データに対する強力なアルゴリズムである**勾配ブースティング木 (GBDT)**、特に**CatBoost**と**LightGBM**が広く用いられ、高い性能を示しました。ニューラルネットワーク（NN）系のモデル（MLP, TabM, DeepTablesなど）も試されましたが、GBDTが優位な状況でした。最終的な予測は、これらのモデルを複数組み合わせた**アンサンブル**によって行われるのが一般的でした。
 
-**各解法の詳細:**
+**特徴量エンジニアリング**が重要な役割を果たしました。提供された多数の数値特徴量（ゲーム特性、エージェント性能特性）はそのまま、あるいは四則演算などで組み合わせて利用されました。`agent1`, `agent2` の文字列は、MCTSの各構成要素（選択戦略、探索定数、プレイアウト戦略、スコア境界）に分解され、**カテゴリ特徴量**として扱われました。さらに、両エージェントの構成要素の組み合わせから**相互作用特徴量**を作成することも有効でした。ゲームルールテキスト (`LudRules`, `EnglishRules`) からは、**TF-IDF + SVD/PCA**や、テキストの**可読性指標**（ARI, McAlpine EFLAW, CLRIなど）が特徴量として抽出されました。
 
-**1位**
+特に1位の解法では、各ゲームの**開始局面で短時間のMCTSを実行**し、その結果（評価値、探索効率など）を**追加特徴量**として利用するという独自のアプローチが採用され、これが大きな性能向上に繋がったと報告されています。
 
-- **アプローチ:** 各ゲームの開始局面で数秒間の木探索を実行し、ゲームのバランスと探索速度に関する追加の特徴量を計算。既存の特徴量と合わせて、CatBoost、LightGBM、TabM、アイソトニック回帰のスタックアンサンブルに投入。
-- **アーキテクチャ:** CatBoost、LightGBM、TabM、アイソトニック回帰のスタックアンサンブル。
-- **アルゴリズム:** UCB1Tuned（木探索の選択戦略）、ランダムプレイアウト（木探索のプレイアウト戦略）、Nelder-Mead法（アンサンブルの重み調整）。
-- **テクニック:**
-    - **開始局面の評価:** UCB1Tunedを用いた木探索によるゲームバランスと探索速度の評価。
-    - **特徴量エンジニアリング:** ゲームルールセットから派生する特徴量（ARI、McAlpine EFLAW、CLRIなど）、MCTSのシミュレーション結果（MovesPerSecond、PlayoutsPerSecondなど）、追加の探索速度メトリクス。
-    - **データ拡張:** 木探索関連の特徴量を複数回計算し、トレーニング時にランダムに選択。非決定的な特徴量を再計算し、範囲内でランダムサンプリング。
-    - **特徴量選択:** 値が一貫していない特徴量（Ludiiプレイヤーのバージョン差異の可能性）を削除。
-    - **アイソトニック回帰:** OOF予測を特徴量として使用するアイソトニック回帰モデルをポスト処理として適用。
-    - **TabM:** 新しいtabular深層学習ライブラリを活用。
-    - **ハイパーパラメータチューニング:** Optunaによる探索。
-    - **アンサンブル:** 20モデルのアンサンブル（10分割CVを2シードで実施）。
+**データ拡張**として、`agent1`と`agent2`を入れ替え、一部の特徴量（`AdvantageP1`, ターゲット`utility_agent1`）の符号や値を反転させたデータを生成する**Flip Augmentation**が非常に効果的であり、多くのチームで採用されました。この拡張は学習データの倍増だけでなく、推論時の**TTA (Test Time Augmentation)** としても利用されました。他の拡張手法（Self-play, Transitivity）も試されました。
 
-**2位**
+モデル構築においては、**スタッキング**（Stage 1モデルの予測値を特徴量としてStage 2モデルを学習）や、**Isotonic Regression**による予測値のキャリブレーション（後処理）も有効なテクニックでした。予測値全体を定数倍するスケーリングや、範囲を[-1, 1]にクリップする後処理も試されました。
 
-- **アプローチ:** 伝統的な5分割CVトレーニング。追加のオフライン生成トレーニングデータは不使用。高度な特徴量エンジニアリングは行わず（LudRulesからのテキストスコアを除く）。特徴量選択は限定的。データ拡張を重視。
-- **アーキテクチャ:** CatBoost (2種類), LightGBM (2種類), MLP (2種類), Auto-Encoder + MLP。
-- **アルゴリズム:** Tfidf Vectorization、Kmeansクラスタリング（CV分割）、Ordinary Least Squares (OLS) 回帰（アンサンブルの重み）。
-- **テクニック:**
-    - **データ準備:** 重複および非情報的な特徴量を削除。LudRulesからARI、McAlpine EFLAW、CLRIスコアを計算。LudRulesに基づくグループでソートし、類似ゲームをクラスタリングしてCV分割。エージェントのフリップ、AdvantageP1の反転、utility_agent1の符号反転によるデータ拡張。カテゴリカル特徴量のOne-Hotエンコーディング。連続変数の標準正規分布へのマッピング。
-    - **モデル:** 7つのモデルのアンサンブル（CatBoost、LightGBM、MLP、AE+MLP）。
-    - **アンサンブル:** CV OLS回帰による重み付け。キャップされたアンサンブル予測を再度CV OLS回帰でスケーリング。異なるシードでトレーニングされた6つのモデルセットの平均。
-    - **LBオーバーフィット:** NNモデルの拡張データ予測を含め、LBで直接重みを調整。等しい重みの予測セットを追加し、LBで直接負の重みを調整。
+**交差検証（CV）** 戦略としては、`GameRulesetName`でグループ化し、同一ゲームのデータが異なるFoldに分割されないようにする**GroupKFold**が基本でした。一部では、ルールの類似性に基づいてゲームをクラスタリングしてからGroupKFoldを行ったり、ターゲット値で層化（Stratification）したりする工夫も見られました。ただし、CVスコアとリーダーボード（LB）スコアの相関が低い場合もあり、信頼できるCVの構築が課題となることもありました。
 
-**3位**
+**各解法の詳細**
 
-- **アプローチ:** 2段階フリップ拡張スタッキング。フリップ拡張データでトレーニングした1段階目モデルのOOF予測を、2段階目の特徴量として使用。
-- **アーキテクチャ:** CatBoost、LightGBM (Dartモード)。
-- **アルゴリズム:** StratifiedGroupKFold（CV分割）、Optuna（ハイパーパラメータチューニング）。
-- **テクニック:**
-    - **データ拡張:** agent1とagent2の入れ替え、AdvantageP1の反転、utility_agent1の符号反転。
-    - **CV:** GameRulesetNameによるStratifiedGroupKFold（8分割）。utility_agent1の少数クラスを近傍クラスに修正。
-    - **特徴量エンジニアリング:** yunsuxiaozi氏のノートブックから特徴量を追加。EnglishRulesのTF-IDF-SVD特徴量（max_featuresを調整）。
-    - **特徴量選択:** Null importance feature selection。
-    - **ハイパーパラメータチューニング:** Optuna。
-    - **モデリング:** 2段階モデリング。1段階目はフリップ拡張データでトレーニングし、OOF予測を生成。2段階目はOOF予測を特徴量として使用。
-    - **アンサンブル:** LightGBMとCatBoostの3シード平均アンサンブル。
-    - **後処理:** 予測値に係数（1.12）を乗算。
+**[1位](https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants/discussion/549801)**
 
-**4位**
+* **アプローチ:** 開始局面での短時間MCTSによる追加特徴量生成 + GBDT/NNモデル + Isotonic Regressionによるスタッキングアンサンブル。
+* **アーキテクチャ:** Base Models: CatBoost, LightGBM, TabM。Stacking Model: Isotonic Regression (Centered Isotonic Regression)。
+* **アルゴリズム:** CatBoost, LightGBM, TabM (回帰)。Isotonic Regression。
+* **テクニック:**
+    * **追加特徴量:** 各ゲーム開始局面でUCB1Tuned-Random MCTSを15秒実行し、評価値や探索速度などを特徴量化（スコアを約0.045 CV, 0.012 LB改善）。
+    * **データ:** 自作の追加学習データ（GAVELアルゴリズムとLLMでルール生成＋対戦シミュレーション、14k行）を使用（重み付けあり）。
+    * **データ拡張:** MCTS特徴量の複数回計算とランダム選択。提供特徴量の複数回再計算とノイズ付与。
+    * **特徴量選択:** Ludiiバージョン差異が疑われる43特徴量を除外するとCVが改善。
+    * **スタッキング:** 各ベースモデルのOOF予測をIsotonic Regressionに入力。
+    * **ハイパーパラメータ:** Optunaで最適化。TabMは論文外の広い隠れ層/低LR/小バッチサイズが有効。LightGBMは`boosting=dart`が重要。
+    * **アンサンブル:** 各スタックモデルは内部で20モデル（10 fold x 2 seed）のアンサンブル。最終的にCatBoost/LightGBM/TabMのスタック出力をNelder-Meadで重み最適化してアンサンブル。
+    * **CV戦略:** GroupKFoldShuffle (`GameRulesetName`)。
 
-- **アプローチ:** パブリックLBのスコアに合わせて調整された、他のKagglerの共有ノートブックの組み合わせ（Kaggle Learning）。スタッキング戦略（CVに基づきつつLBにオーバーフィット）。
-- **アーキテクチャ:** DeepTables NN、LightGBM、CatBoost、XGBoost、RandomForest、Ridge、Lasso、KNN、SVR、LightAutoML (MLP, Dense Light, Dense, ResNet)、TabPFN、TabNet。
-- **アルゴリズム:** Repeated Stratified K-Fold CV。
-- **テクニック:**
-    - **アンサンブル:** 複数の公開ノートブックの予測を組み合わせる。カスケードマージと手動回帰（クリッピングあり）。
-    - **CV:** 5分割GKF。
-    - **LBへのオーバーフィット:** 手動で重みを調整。
+**[2位](https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants/discussion/549718)**
 
-**5位**
+* **アプローチ:** Flip Augmentation + GBDT/NNモデルの重み付きアンサンブル。CVとLB乖離からLB重視へ。
+* **アーキテクチャ:** CatBoost (x2), LightGBM (x2), MLP (x2), AE+MLP。
+* **アルゴリズム:** CatBoost, LightGBM, MLP, AutoEncoder (回帰)。OLSによるアンサンブル重み決定と最終スケーリング。
+* **テクニック:**
+    * **データ拡張:** **Flip Augmentation**を使用（学習データ倍増）。
+    * **特徴量:** `LudRules`から可読性指標 (ARI, McAlpine EFLAW, CLRI) を抽出。カテゴリ特徴量はOne-hotエンコード。一部GBDTモデルではルールセットグループのダミー変数も使用。NN入力は標準正規分布にスケーリング。
+    * **CV戦略:** `LudRules`のTF-IDF+KMeansでルールをクラスタリングし、そのグループIDでGroupKFold (5-split)。
+    * **アンサンブル:** 7モデルの予測値をOLSで重み付け（一部NNモデルの重みが負になったが、LBスコア改善のため採用）。6つの異なるシードで学習したモデルセットをさらに等価重みでアンサンブル。NNモデルのFlip Augmentation版予測はCVでは除外したが、最終的なLB重視提出では負の重みで追加。
+    * **後処理:** 予測値を[-1, 1]にクリップ後、OLSでスケーリング。
+    * **LB重視:** CVベース提出よりも、LBスコアに合わせてNNのAugmentation版予測や等価重み予測を追加した提出の方がPrivateスコアも良かった。
 
-- **アプローチ:** 修正されたAdvantageP1特徴量、CatBoost、2つのLGBM Dartモデルのアンサンブル。異なるデータ/特徴量でトレーニング。
-- **アーキテクチャ:** CatBoost、LightGBM (Dartモード)。
-- **アルゴリズム:** Stratified Group 10-Fold（CV分割）。
-- **テクニック:**
-    - **特徴量エンジニアリング:** 調整されたAdvantageP1特徴量。
-    - **データ拡張:** agent1とagent2の入れ替え、AdvantageP1の反転、utility_agent1の符号反転（TTAとして推論時に使用）。
-    - **モデリング:** CatBoostとLightGBM Dartモデル。
-    - **アンサンブル:** AnilとSercanのモデルセットの重み付きブレンド。
+**[3位](https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants/discussion/549588)**
 
-**6位**
+* **アプローチ:** Flip Augmentation + 2段階スタッキング。LightGBMとCatBoostのアンサンブル。
+* **アーキテクチャ:** Stage 1: LightGBM, CatBoost。Stage 2: LightGBM, CatBoost。
+* **アルゴリズム:** LightGBM, CatBoost (回帰)。
+* **テクニック:**
+    * **データ拡張:** **Flip Augmentation**。
+    * **CV戦略:** StratifiedGroupKFold (`GameRulesetName`, ターゲット値で層化)。
+    * **特徴量:** yunsuxiaozi氏のノートブックから可読性指標などを追加。`EnglishRules`のTF-IDF+SVD特徴量も追加（パラメータ探索重要）。
+    * **特徴量選択:** Null Importanceで不安定な特徴量を除去。
+    * **スタッキング:** Stage 1モデルのOOF予測をStage 2モデルの特徴量として使用。
+    * **ハイパーパラメータ:** Optunaで最適化。
+    * **アンサンブル:** LightGBMとCatBoostのブレンド。3シード平均。
+    * **後処理:** 最終予測値に係数(1.12)を乗算（予測値の平均がターゲット平均より低いため）。
 
-- **アプローチ:** ゼロコストデータ生成、適切なモデリング、手動および自動の特徴量生成、2段階モデルによるアンサンブル。
-- **アーキテクチャ:** CatBoost、LGBM、XGB、DNN (MLP)、OpenFE (自動特徴量生成)。
-- **アルゴリズム:** StratifiedGroupKFold（CV分割）、OpenFE（自動特徴量生成）。
-- **テクニック:**
-    - **ゼロコストデータ生成:** agentの入れ替え、AdvantageP1の反転、utility_agent1の反転。
-    - **手動特徴量生成:** agent文字列の分割、litsea氏のノートブックからの特徴量、クロスエージェント特徴量。
-    - **自動特徴量生成:** OpenFEライブラリを使用。
-    - **特徴量選択:** CV重要度に基づく。
-    - **モデリング:** Catboost、LGBM、XGB、DNN。2段階モデル（Catboost OOFを特徴量または初期化として使用）。
-    - **アンサンブル:** 重み付きアンサンブル（scipy minimize関数で重みを選択）。LB分布へのマッチング（クリッピング、スケーリング）。
+**[4位](https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants/discussion/549603)**
 
-**7位**
+* **アプローチ:** 多数の公開ノートブックの予測結果を**カスケード式にアンサンブル**。LBスコアに基づき手動で重みを調整。
+* **アーキテクチャ:** アンサンブル対象として、公開ノートブック由来のGBDT (LightGBM, CatBoost) やNN (DeepTables) モデルを利用。
+* **アルゴリズム:** 回帰モデルのアンサンブル (手動重み調整)。
+* **テクニック:**
+    * **モデルソース:** yunsuxiaozi氏、hideyukizushi氏、yekenot氏など多数の公開ノートブックの予測結果を利用。
+    * **アンサンブル戦略:** ベースとなるアンサンブルから開始し、他のモデルの予測結果を段階的に追加していく。各ステップで、追加する予測結果に対する重み（正または負）を手動で調整し、Public LBスコアが改善するように進める。
+    * **後処理:** 最終的なアンサンブル予測値に対し、定数倍のスケーリング（x1.25）とクリッピング（-0.98〜0.98）、わずかなシフト（±0.005）を適用。
+    * **LB重視:** CVスコアは考慮せず、Public LBスコアのみを指標としてアンサンブルを構築（LBオーバーフィット戦略）。
+    * **備考:** このアプローチは他の参加者の成果に大きく依存しており、モデル構築や特徴量エンジニアリングの独自性は低い。
 
-- **アプローチ:** TreeモデルとNNモデルのアンサンブル。フリップ拡張を2段階で行うスタッキング。
-- **アーキテクチャ:** LGB、CatBoost、NN (DeepTables)。
-- **アルゴリズム:** Stratified Group K-Fold（CV分割）。
-- **テクニック:**
-    - **データ拡張:** agent1とagent2の入れ替え、AdvantageP1の反転、ラベルの反転（非常に低い確率）。テスト時拡張（TTA）。
-    - **特徴量エンジニアリング:** 数値特徴量の交差特徴量、ターゲットエンコーディング。
-    - **モデリング:** LGB、CatBoost、DeepTables NN。
-    - **2段階モデリング:** フリップ拡張データで1段階目を学習し、OOF予測を生成。OOF予測を2段階目の特徴量として使用。
-    - **アンサンブル:** 重み付き平均。
+**[5位](https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants/discussion/549585)**
 
-**8位**
+* **アプローチ:** CatBoost, LightGBM (Dart), DeepTablesモデルの重み付きアンサンブル。Flip Augmentation。調整済みAdvantage特徴量。
+* **アーキテクチャ:** CatBoost, LightGBM (Dart), DeepTables (NN)。
+* **アルゴリズム:** CatBoost, LightGBM, DeepTables (回帰)。重み付き平均アンサンブル。
+* **テクニック:**
+    * **データ拡張:** **Flip Augmentation**（学習とTTA）。
+    * **特徴量:** `AdvantageP1`を調整（`Completion`と`Drawishness`を考慮）。TF-IDF特徴量（`EnglishRules`, `LudRules`, `agent1`, `agent2`）。
+    * **CV戦略:** Stratified Group 10-Fold (`GameRulesetName`グループ、ターゲット値で層化）。
+    * **学習:** GBDTはStackingも使用。DeepTablesはMin-Maxスケーリング、LRスケジューラ、Adam。
+    * **アンサンブル:** 各メンバーのパイプライン（Anil: CatBoost, Sercan: CatBoost+LightGBM+DeepTablesのブレンド）の予測結果をさらに重み付きでブレンド。
 
-- **アプローチ:** 10日間の挑戦。MCTS Starterをベースに、polarsによる高速化、ゲームルールに基づいた特徴量エンジニアリング、データ拡張、CatBoostのアンサンブル。
-- **アーキテクチャ:** CatBoost。
-- **アルゴリズム:** GroupKFold（CV分割）。
-- **テクニック:**
-    - **高速化:** polarsライブラリによるデータ処理の高速化。
-    - **特徴量エンジニアリング:** ボード形状、駒の種類、ランダム性の有無、ルール複雑性、特殊移動パターンなど、ゲームルールに基づいた特徴量。
-    - **データ拡張:** agent1とagent2の入れ替え、より複雑な同値関係と推移律に基づく拡張。
-    - **後処理:** 予測結果に係数（1.2）を乗算（LBで最適化）。
+**[6位](https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants/discussion/549582)**
 
-**9位**
+* **アプローチ:** Zero-costデータ生成（Flip Augmentation + Balance反転）、自動特徴量生成（OpenFE）、GBDT/NNの2段階スタッキングアンサンブル。LB重視の後処理。
+* **アーキテクチャ:** Base: CatBoost。Stage 2: CatBoost (OOF特徴量), LightGBM (OOF特徴量), CatBoost (OOFベースライン), MLP (OOF特徴量 + 元特徴量)。
+* **アルゴリズム:** CatBoost, LightGBM, MLP (回帰)。RMSE損失。MADGRAD (MLP)。
+* **テクニック:**
+    * **データ拡張:** **Flip Augmentation** に加え、`Balance` 特徴量も反転させることで、元データと拡張データのOOFスコア差を埋める。Self-play拡張は効果なし。TTAも可能だったが最終提出では不使用。
+    * **特徴量:** エージェント文字列分解、公開ノートブック由来の特徴量、エージェント間相互作用特徴量。**OpenFE**で自動生成した特徴量（Top500）も使用。ルールテキスト特徴量は効果なし。
+    * **CV戦略:** Stratified Group K-Fold (`GameRulesetName`, ターゲット値, `agent1`で層化)。5 folds。拡張データは学習のみに使用し、検証は元データのみ。
+    * **スタッキング:** Nested CV (5x5 Fold) でCatBoostのOOF予測を生成し、Stage 2モデルの特徴量またはベースラインとして使用。
+    * **NN:** カテゴリ特徴量はEmbedding、数値特徴量はQuantile Transformerで処理後、MLPに入力。
+    * **アンサンブル:** Stage 1 CatBoostとStage 2モデル群の重み付きアンサンブル（重みはCVベースでScipy Minimizeにより最適化）。
+    * **後処理:** Public LB probingに基づき、最終予測値を `clip(pred * 1.175, -1, 1)` で調整（LBオーバーフィット）。
 
-- **アプローチ:** 様々な拡張と多数のモデリングトリック。修正されたAdvantageP1特徴量、CatBoost、2つのLGBM Dartモデルのアンサンブル。
-- **アーキテクチャ:** CatBoost、LightGBM (Dartモード)。
-- **アルゴリズム:** 8分割GroupKFold（CV分割）。
-- **テクニック:**
-    - **データ拡張:** agent1とagent2の入れ替え、AdvantageP1の反転、utility_agent1の符号反転（TTAとして推論時に使用）。
-    - **特徴量エンジニアリング:** AdvantageP1の修正。
-    - **モデリング:** CatBoostとLGBM Dartモデル。utility_agent1 - AdvantageP1 を予測。AdvantageP1を最終アンサンブルに追加。Wins/Lossesの予測を試行。MultiRMSEを試行。エージェントごとのモデルを試行。フルフィット。分類器の試行。疑似ラベリングの試行。
-    - **アンサンブル:** 重み付き平均（クリッピングあり）。
+**[7位](https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants/discussion/549617)**
 
-**10位**
+* **アプローチ:** Flip Augmentation + GBDT/NNアンサンブル。数値特徴量のクロス特徴量生成。
+* **アーキテクチャ:** LightGBM, CatBoost, NN (PyTorch実装、CIN+FMプーリング)。
+* **アルゴリズム:** LightGBM, CatBoost, NN (回帰)。RMSE損失。
+* **テクニック:**
+    * **データ拡張:** **Flip Augmentation**（学習とTTA）。
+    * **CV戦略:** GroupKFold (`GameRulesetName`) + ターゲット値で層化。
+    * **特徴量:** Top20数値特徴量のペアワイズな積・商を追加（クロス特徴量、効果大）。Target Encoding。LightGBMの葉インデックス特徴量 (depth 5, 200 trees) をNNに追加。
+    * **学習:** Treeモデルは深めに設定 (LGBM 16, CBT 10)、正則化を強めに (lambda=10)。NNはビン化数値特徴量とカテゴリ特徴量入力。ラベル摂動 (Multinomial)。
+    * **アンサンブル:** LightGBM (10 folds) + NN (5 folds) の重み付きブレンド (1:0.75)。
+    * **後処理:** 予測値に係数を乗算 (a*x + b の形式でOOFに基づき最適化)。
 
-- **アプローチ:** MCTS Starterをベースに、データ拡張（agent順序の入れ替え）、AdvantageP1のビニング、フォールド数の増加。予測値に定数を乗算（オーバーフィット）。
-- **アーキテクチャ:** CatBoost（MCTS Starterをベース）。
-- **アルゴリズム:** GroupKFold（CV分割）。
-- **テクニック:**
-    - **データ拡張:** agent順序の入れ替え、AdvantageP1の反転、utility_agent1の符号反転。
-    - **特徴量エンジニアリング:** AdvantageP1のビニング（10個のビン）。
-    - **CV:** 10分割GroupKFold。
-    - **アンサンブル:** 複数のモデルの平均。
-    - **後処理:** 予測値に定数（1.25または1.3）を乗算（LBで最適化）。
+**[8位](https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants/discussion/549616)**
+
+* **アプローチ:** 単一のCatBoostモデル。Polarsによる高速な特徴量エンジニアリング。Flip Augmentationと、より複雑な関係性（推移律など）に基づくデータ拡張。
+* **アーキテクチャ:** CatBoost。
+* **アルゴリズム:** CatBoost (回帰)。RMSE損失。
+* **テクニック:**
+    * **特徴量:** 公開ノートブック由来の可読性指標など。ゲームボード形状、ピースタイプ、ランダム性有無、ルール複雑性、特殊移動パターンなど、ゲームルールに基づいた特徴量エンジニアリング。
+    * **データ拡張:** **Flip Augmentation**。さらに、`A > B` かつ `B = C` ならば `A > C` のような**推移律**に基づくデータ拡張も実装（最終アンサンブルには含めず）。
+    * **CV戦略:** 不明（記述なし）。
+    * **学習:** 10 Foldで学習。
+    * **後処理:** 予測値に係数 (1.2) を乗算（Public LBで最適化）。
+    * **その他:** Feature Engineeringの効率化のためPolarsを多用。VS Code拡張機能の開発デモとして参加。
+
+**[9位](https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants/discussion/549624)**
+
+* **アプローチ:** DeBERTa-v3-large, DeBERTa-v2-xlarge (LoRA) モデルのアンサンブル。文字レベルでのトークナイザ差分吸収。Mixtralによるデータセット改良。
+* **アーキテクチャ:** DeBERTa-v3-large (通常版、LayerDrop+MultiSample Dropout版)、DeBERTa-v2-xlarge (LoRA)。
+* **アルゴリズム:** Token Classification? (MCTSコンペのファイルと混同している可能性。これはPIIコンペの解法詳細)。
+* **テクニック:** (MCTSコンペのファイルではないため、省略)
+
+**[10位](https://www.kaggle.com/competitions/um-game-playing-strength-of-mcts-variants/discussion/549605)**
+
+* **アプローチ:** CatBoostモデルのアンサンブル。Flip Augmentation。AdvantageP1のビニング。
+* **アーキテクチャ:** CatBoost。
+* **アルゴリズム:** CatBoost (回帰)。RMSE損失。
+* **テクニック:**
+    * **データ拡張:** **Flip Augmentation**（学習とTTA）。
+    * **特徴量:** `AdvantageP1`を10分割にビニングした特徴量を追加。
+    * **CV戦略:** 不明（記述なし）。
+    * **学習:** 10 Foldで学習。
+    * **アンサンブル:** 複数のCatBoostモデル（パラメータやシード違い？）のアンサンブル。
+    * **後処理:** 予測値に係数 (1.25 or 1.3) を乗算（予測値が0に寄る傾向を補正）。
+    * **その他:** NNモデルは効果がなかった。

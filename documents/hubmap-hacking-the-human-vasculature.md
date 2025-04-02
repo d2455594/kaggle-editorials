@@ -1,172 +1,187 @@
 ---
 tags:
   - Kaggle
+  - ヘルスケア
+  - AtCoder
 startdate: 2023-05-23
 enddate: 2023-08-01
 ---
 # HuBMAP - Hacking the Human Vasculature
-https://www.kaggle.com/competitions/hubmap-hacking-the-human-vasculature
+[https://www.kaggle.com/competitions/hubmap-hacking-the-human-vasculature](https://www.kaggle.com/competitions/hubmap-hacking-the-human-vasculature)
 
 **概要 (Overview)**
 
-- **目的:** このコンペティションの目的は、人体の様々な臓器（腎臓、大腸、肺、脾臓、前立腺）から得られた**高解像度の組織学（顕微鏡）画像**において、**血管（Vasculature）** の領域を自動的に特定し、セグメンテーション（領域分割）するモデルを開発することです。
-- **背景:** Human BioMolecular Atlas Program (HuBMAP) は、人体の個々の細胞レベルでの高解像度マップを作成し、健康と病気への理解を深めることを目指す大規模プロジェクトです。血管網は、組織への栄養供給や老廃物除去に不可欠であり、多くの疾患（例：腎臓病）の理解や診断において重要な構造です。膨大な量の顕微鏡画像から血管のような特定の構造を自動的に抽出する技術は、HuBMAPのようなプロジェクトで生成されるデータを効率的に解析するために不可欠です。
-- **課題:** 組織学画像はしばしばギガピクセル単位の非常に大きなサイズであり、効率的な処理が必要です。また、組織の染色状態、組織の種類、個体差などにより、画像の見た目や血管の形態は大きく異なります。さらに、毛細血管のような微細な構造を他の組織と区別することは困難な場合があります。モデルはこれらの課題に対処し、様々な臓器の画像に対して頑健に血管領域を特定する必要があります。これは**医用画像セグメンテーション**のタスクです。
+* **目的:** このコンペティションの目的は、高解像度の人体腎臓組織の顕微鏡画像 (Whole Slide Images - WSI) から、機能的な組織単位である血管構造（特に血液血管）を高精度に検出・セグメンテーションする機械学習モデルを開発することです。
+* **背景:** HuBMAP (Human BioMolecular Atlas Program) は、人体の様々な組織における細胞レベルでの構造と機能をマッピングする大規模プロジェクトです。血管系の正確なマッピングは、腎臓の生理機能や疾患（腎臓病、高血圧など）の理解に不可欠ですが、手作業でのアノテーションは時間がかかり、主観性も伴います。AIによる自動化は、研究の加速と再現性の向上に貢献します。
+* **課題:** WSIは非常に高解像度であり、データ量が膨大です。また、組織の染色状態や切片の厚さ、アーティファクトなどにより、画像の外観には大きなばらつきがあります。血管の形状やサイズも多様であり、他の組織構造との区別が難しい場合もあります。提供されるデータセットには、異なるソースからのデータやノイズの多いアノテーションが含まれており、これらを効果的に扱う必要があります。これは本質的には**インスタンスセグメンテーション**タスクです。
 
 **データセットの形式 (Dataset Format)**
 
-提供される主なデータは、巨大な組織学画像ファイルと、それに対応する血管領域の正解アノテーション（注釈）です。
+提供される主なデータは、WSIをタイル化した画像と、それに対応する血管などの構造物のポリゴン形式のアノテーションです。
 
-1. **トレーニングデータ:**
-    
-    - `train.csv`: トレーニング画像のメタデータ。各画像の `id`、画像の提供元となった臓器の種類 (`organ`)、画像のサイズ、ピクセルあたりの解像度などの情報が含まれます。
-    - `train_annotations.json`: **ターゲット変数**となる血管領域の正解アノテーション。各画像 (`id`) に対して、血管領域の境界線を示す**ポリゴン（多角形）** の座標リストとしてJSON形式で提供されます。
-    - `train_images/`: 実際の組織学画像ファイル。通常、非常に大きな**TIFF形式**（しばしばマルチ解像度のPyramidal TIFF）で提供されます。
-2. **テストデータ:**
-    
-    - `test_images/`: 血管領域を予測する必要があるテスト用の組織学画像ファイル（TIFF形式）。
-    - `test.csv`: テスト画像のメタデータ。
-    - 正解のアノテーション（JSONファイル）は提供されません。
-3. **`sample_submission.csv`**:
-    
-    - 提出フォーマットのサンプル。通常、`id`（画像ID）と `rle`（予測結果）の列を持ちます。`rle` 列には、モデルが予測した**全ての血管領域**を結合した単一のセグメンテーションマスクを、**ランレングスエンコーディング (RLE)** 形式の文字列として格納します。
+1.  **トレーニングデータ:**
+    * `train/`: WSIをタイル化した画像（.tiff形式、例: 512x512ピクセル）。複数のデータセット (dataset1, dataset2など) が存在し、それぞれ由来やアノテーション品質が異なる可能性があります。
+    * `polygons.jsonl`: 各タイル画像内の構造物（blood\_vessel, glomerulus, unsure）のアノテーションデータ。各構造物はポリゴン（頂点座標のリスト）で表現されます。
+    * `tile_meta.csv`: 各タイル画像に関するメタデータ（ソースWSI、座標など）。
+2.  **テストデータ:**
+    * `test/`: トレーニングデータと同様の形式のタイル画像（.tiff形式）。
+    * アノテーションは提供されません。
+    * PublicテストセットとPrivateテストセットで由来するWSIが異なる可能性が示唆されています。
+3.  **`sample_submission.csv`**:
+    * 提出フォーマットのサンプル。`id`（タイル画像のID）、`height`, `width`（画像の高さ・幅）、`rle`（予測された各血管インスタンスのマスクをランレングスエンコーディング形式で記述）の列を持ちます。
 
 **評価指標 (Evaluation Metric)**
 
-- **指標:** **Dice Coefficient (ダイス係数)**
-- **計算方法:** ダイス係数は、予測されたセグメンテーションマスクと正解のセグメンテーションマスクの重複度を測る指標です。
-    - Dice = (2 * |予測マスク ∩ 正解マスク|) / (|予測マスク| + |正解マスク|)
-    - ここで、`|予測マスク ∩ 正解マスク|` は両方のマスクで血管と判定されたピクセル数（True Positives）、`|予測マスク|` は予測マスクで血管と判定された全ピクセル数、`|正解マスク|` は正解マスクで血管と判定された全ピクセル数です。
-    - 評価は通常、**画像ごと**にDice係数を計算し、テストデータセット全体の**画像の平均Dice係数**が最終的なスコアとなります。
-- **意味:** 医用画像セグメンテーションの評価で標準的に用いられる指標であり、予測された血管領域が実際の血管領域とどれだけ正確に一致しているかを示します。値は0から1の範囲を取り、1に近いほど予測精度が高いことを意味します。このコンペティションでは、Dice係数が**高い**ほど、モデルが様々な臓器の画像から血管をより正確にセグメンテーションできていると評価されます。
+* **指標:** **Average Precision (AP) at IoU threshold 0.6** (一般的に `mAP@0.6` や `segm_mAP60` と呼ばれる)
+* **計算方法:**
+    1.  予測された各血管マスクと真の血管マスクとの間で Intersection over Union (IoU) を計算します。IoU = (重複領域の面積) / (結合領域の面積)。
+    2.  IoUが閾値（このコンペでは0.6）を超えた予測を真陽性 (True Positive - TP) とします。閾値以下の予測や、真のマスクに対応しない予測は偽陽性 (False Positive - FP)。予測されなかった真のマスクは偽陰性 (False Negative - FN) となります。
+    3.  異なる信頼度スコアで予測をランク付けし、Precision-Recallカーブを描画します。
+    4.  Precision-Recallカーブ下の面積 (Average Precision - AP) を計算します。
+    5.  最終的なスコアは、全てのテスト画像におけるAPの平均値（Mean Average Precision - mAP）となります。
+* **意味:** 予測された血管マスクの位置と形状が、真のマスクとどれだけ正確に一致しているかを評価します。IoU閾値0.6は、比較的厳密な一致を要求することを示します。スコアは**高い**ほど、より正確に血管を検出・セグメンテーションできていると評価されます。
 
-要約すると、このコンペティションは、人体の様々な臓器の高解像度組織学画像から血管領域を特定するセマンティックセグメンテーションタスクです。データは巨大なTIFF画像とポリゴン形式のアノテーションで構成され、性能は予測マスクと正解マスクの重複度を示すDice係数（画像ごとの平均値、高いほど良い）によって評価されます。
+要約すると、このコンペティションは、腎臓組織のタイル画像から血管を検出・セグメンテーションするインスタンスセグメンテーションタスクです。データはタイル画像とポリゴン形式のアノテーションで構成され、性能はIoU閾値0.6における平均適合率（高いほど良い）によって評価されます。
 
 ---
 
 **全体的な傾向**
 
-上位解法では、インスタンスセグメンテーションタスク（特に血管構造の検出）に対して、物体検出とセグメンテーションを組み合わせたモデルアーキテクチャ（Mask R-CNN、Cascade R-CNN、HTCなど）や、物体検出モデルにセグメンテーションヘッドを追加したモデル（YOLOv7/v8-seg、RTMDetなど）が多く用いられました。特にMMDetectionライブラリをベースとした実装が多く見られます。データの不均衡性（Dataset1とDataset2の特性の違い、WSI間のばらつき）に対応するため、信頼性の高い交差検証（CV）戦略の構築や、Dataset2のノイズを考慮した学習戦略（マルチステージ学習、疑似ラベル生成、Dataset1のみでのファインチューニング）が重要視されました。データ拡張（Augmentation）は、幾何変換（回転、反転、スケール変更など）やStain Augmentation（染色スタイルの変換）が広く利用されました。モデルの性能向上には、Exponential Moving Average (EMA) や Stochastic Weight Averaging (SWA)、高解像度での学習/推論、Test Time Augmentation (TTA)、Weighted Box Fusion (WBF) によるアンサンブルなどが有効でした。後処理として、小さなマスク領域の除去や、糸球体領域との重複に基づくフィルタリング、マスクスコアを用いたインスタンススコアの調整なども行われました。一部の解法では、ラベルのDilation（膨張）がPublic LBスコアを大きく改善する現象が報告されましたが、CVスコアとの相関が低いため、最終提出ではDilationあり/なしの両方を提出する戦略も取られました。
+この腎臓血管のインスタンスセグメンテーションタスクでは、高解像度画像の一部であるタイル画像を扱う必要がありました。上位解法の多くは、**Mask R-CNN**系のアーキテクチャ（Cascade R-CNN, HTC, DetectoRS, ViT-Adapterなど）を採用していました。物体検出モデル（YOLO系, RTMDetなど）を単独で、あるいはセグメンテーションモデルと組み合わせて使うアプローチも見られました。
+
+**データの扱い**が非常に重要でした。
+
+* **データセット:** 提供された複数のデータセット（特に高品質なdataset1とノイズが多い可能性のあるdataset2）をどう活用するかが鍵でした。dataset2で事前学習しdataset1でファインチューニングする**2段階学習**や、dataset1のみを使用する戦略がありました。
+* **入力形式:** タイル境界の影響を軽減するため、隣接タイルを用いて**パディングされた大きな入力画像**（例: 768x768以上）を作成する手法が広く採用されました。
+* **CV戦略:** Public LBが不安定（特にDilation問題のため）であったことから、**信頼できるCross Validation (CV)** の構築が重視されました。WSI（Whole Slide Image）単位での分割や、WSI内の位置に基づく分割が行われました。
+
+**学習と推論のテクニック**も多様でした。
+
+* **アーキテクチャ:** CNNベース（ResNeXt, ConvNeXtなど）とTransformerベース（Swin, CoAt, ViT-Adapterなど）の両方が使われました。
+* **学習:** **EMA (Exponential Moving Average)** や **SWA (Stochastic Weights Averaging)** が有効でした。強力なAugmentation（幾何学的変換、色調変換（Stain Augmentation含む）、AutoAugmentなど）が不可欠でした。
+* **アンサンブル:** 複数モデル（異なるアーキテクチャ、Fold、入力）のアンサンブルはスコア向上に必須でした。バウンディングボックスのアンサンブルには**WBF (Weighted Boxes Fusion)** がよく使われました。
+* **後処理:** 小さなマスクや低信頼度マスクの除去、糸球体領域との重複に基づくフィルタリング、アンサンブル結果を用いたフィルタリング、スコアのリファイン（bboxスコア x マスクスコア）などが行われました。
+* **Dilation問題:** 予測マスクをDilation（膨張）するとPublic LBが向上する現象がありましたが、多くの場合CVやPrivate LBではスコアが悪化するため、Dilationなしの提出が主流となりました。これはdataset2のアノテーション特性に起因する可能性が指摘されました。
 
 **各解法の詳細**
 
-**1位**
+**[1位](https://www.kaggle.com/competitions/hubmap-hacking-the-human-vasculature/discussion/429060)**
 
-- **アプローチ:** 物体検出モデル(RTMDet)をベースとし、マスク予測精度よりもバウンディングボックス(bbox)精度に注力。マスク情報を補助的に利用し、EMAを活用して安定性と精度を向上。
-- **アーキテクチャ:** RTMDet-x (ベースライン)。 Mask R-CNN、YOLOX-xもアンサンブルに使用。
-- **アルゴリズム:** EMA (Exponential Moving Average)、WBF (Weighted Box Fusion)。
-- **テクニック:**
-    - **EMA:** 固定学習率と組み合わせることで学習の安定化と精度向上に大きく寄与。複数のEMAモデルを保持。
-    - **データセット/CV:** Dataset1とDataset2の両方を使用。Dataset1を'i'座標で分割してCV。
-    - **マスク情報の活用:** ①RandomRotateScaleCrop Augmentationでbboxを再計算、②モデルにマスクヘッドを追加して補助損失として利用、の両方が有効。追加したマスクヘッドの予測精度も良好。
-    - **Augmentation:** 強力な幾何学的Augmentation (RandomRotateScaleCropなど)。
-    - **学習:** Dataset1とDataset2の画像を特定の比率(3:5)で混合したバッチで学習。
-    - **アンサンブル:** bbox予測は複数モデル(RTMDet x3, YOLOX-x, Mask R-CNN、各2fold分)のWBF。マスク予測はMask R-CNN (入力サイズ1440)の結果を使用。TTA不使用。
-    - **Dilation:** 最終日まで適用せず。Publicスコアを見て適用を検討したが、最終提出はDilationなし（結果的に奏功）。
+* **アプローチ:** 物体検出モデルRTMDetを中心に、バウンディングボックス (bbox) 精度向上に注力。EMAが非常に有効。
+* **アーキテクチャ:** RTMDet-x（ベースライン）、YOLOX-x、Mask R-CNN (HTC RoI head)。RTMDetに簡易的なマスクヘッドを追加。
+* **アルゴリズム:** WBF (bboxアンサンブル用)。
+* **テクニック:**
+    * **学習:** EMAの使用（固定学習率と併用）。Dataset1とDataset2の両方を使用。Dataset1は'i'座標で分割 (Train/Val)。Dataset2のサンプル比率を多くする (5/8)。
+    * **マスク教師:** マスクアノテーションをbbox精度向上のために利用（ランダム回転時のbbox再計算、マスクヘッド追加）。
+    * **Augmentation:** 強力な幾何学的Augmentation (RandomRotateScaleCrop, Rot90, Flip)。
+    * **推論:** 複数モデル（RTMDet x3, YOLOX-x, Mask R-CNN、各2 Fold）のbboxをWBFでアンサンブル。マスクはMask R-CNN (入力サイズ1440) のマスクヘッドから生成。TTA不使用。Dilation不使用。
 
-**2位**
+**[2位](https://www.kaggle.com/competitions/hubmap-hacking-the-human-vasculature/discussion/429240)**
 
-- **アプローチ:** 信頼性の高いCV戦略を構築し、多様なモデルのアンサンブルで安定性を確保。Dilationの有無で最終提出を分ける。
-- **アーキテクチャ:** Cascade Mask R-CNN (Swin-T, CoAt-Small, ConvNeXt-T, ConvNeXt-S)。
-- **アルゴリズム:** SWA (Stochastic Weight Averaging)、WBF (推定)、NMS。
-- **テクニック:**
-    - **CV戦略:** Dataset1の各WSIを左右に分割し4 Fold作成。訓練データ中の同WSIタイルは`staintools`で別WSIスタイルに変換して使用（Leakage抑制）。
-    - **入力データ:** ①元タイル、②隣接タイルでパディングしたタイル、の2種類を使用。
-    - **Augmentation:** 強力なAugmentation (Stain Augmentation, 幾何変換, AutoAugmentなど)。
-    - **学習:** 2段階学習（Stage1: Dataset1(3 folds)+Dataset2で学習、Stage2: Dataset1(3 folds)のみでFine-tuning）。Blood Vesselクラスのみ学習。複数チェックポイントでSWA。
-    - **アンサンブル:** FoldモデルとFull dataモデルを組み合わせ。
-    - **後処理:** 複数フィルタリング（Glomeruli重複、低信頼度、アンサンブル画素数カウント、アンサンブルインスタンス数カウント(NMS利用)、小マスク）。
-    - **Dilation:** CVでは効果がなかったため信頼せず。最終提出はDilationあり/なしの両方を提出（なしの方がPrivateスコア良好）。
+* **アプローチ:** 信頼性の高いCV構築と、多様なモデルによるアンサンブル。Dilationあり/なしの両方を提出。
+* **アーキテクチャ:** Cascade Mask R-CNN (Swin-T, CoAt-Small, ConvNeXt-T/S バックボーン)。
+* **アルゴリズム:** NMS (インスタンスフィルタリング用)。
+* **テクニック:**
+    * **CV:** Dataset1をWSIごと、さらに左右に分割して4 Fold作成。同じWSI由来のタイルがTrain/Valに含まれないようにStain Augmentation (`staintools`) でスタイル変換したデータを使用。
+    * **入力:** 元のタイル、または隣接タイルで128ピクセルパディングしたタイルを使用。
+    * **学習:** 2段階学習（Stage1: Dataset1(3 folds) + Dataset2、Stage2: Dataset1(3 folds) のみでファインチューン）。血栓 (blood vessel) クラスのみで学習。SWA (最終5チェックポイント)。
+    * **Augmentation:** Stain Augmentation、強力な幾何学的・色調Augmentation、AutoAugment (DETR風)。
+    * **後処理:** 糸球体内マスク除去、低信頼度マスク除去、ピクセル数/インスタンス数に基づくアンサンブルフィルタリング（Quantile Threshold使用）、小マスク除去。
+    * **アンサンブル:** FoldモデルとFull dataモデルを組み合わせ。
 
-**3位**
+**[3位](https://www.kaggle.com/competitions/hubmap-hacking-the-human-vasculature/discussion/430242)**
 
-- **アプローチ:** マルチステージ学習でDataset2のノイズに対応。ViT-Adapterなど新しいアーキテクチャを積極的に採用。Pseudo Labelも一部利用。
-- **アーキテクチャ:** ViT-Adapter-L (x2), CBNetV2 Base, DetectoRS ResNeXt-101-32x4d, DetectoRS ResNet50。
-- **アルゴリズム:** WBF (Weighted Box Fusion)。Erosion + Dilation。
-- **テクニック:**
-    - **マルチステージ学習:** Stage1: Dataset2で事前学習（高LR、低エポック、軽Augmentation）。Stage2: Dataset1でFine-tuning（低LR、高エポック、重Augmentation、高解像度）。
-    - **疑似ラベル:** Dataset3に対して疑似ラベルを生成し、一部モデルの学習に使用（LBスコア向上は見られず）。
-    - **モデル:** ViT-Adapter, CBNetV2, DetectoRS (HTCベース) など多様なアーキテクチャを採用。
-    - **損失関数:** マスクヘッドの損失重みを増加（HTCベースモデル）。
-    - **学習:** 高解像度学習 (1200x1200 ~ 2048x2048)。Cosine Scheduler w/ warmup。SGDまたはAdamW。
-    - **推論:** Multi Scale Inference (ViT-Adapter)。FlipベースTTA。
-    - **アンサンブル:** WBFを使用。CNNとTransformerベースのモデルを組み合わせ多様性を確保。
-    - **後処理:** Erosion後にDilationを1回適用（マスク形状の平滑化、+0.005 LB向上）。
+* **アプローチ:** Mmdetベースの最新アーキテクチャ (ViT-Adapter, CBNetV2, DetectoRS) を活用。Dataset2を事前学習に利用する2段階学習。
+* **アーキテクチャ:** ViT-Adapter-L (x2), CBNetV2-Base, DetectoRS (ResNeXt-101-32x4d, ResNet50)。
+* **アルゴリズム:** WBF (bboxアンサンブル用)、NMS (TTA用)。
+* **テクニック:**
+    * **学習:** 2段階学習 (Stage1: Dataset2で事前学習、高LR、軽Augmentation → Stage2: Dataset1でファインチューン、低LR、重Augmentation、高解像度)。Pseudo Labelも一部使用（効果は限定的）。
+    * **入力:** 高解像度入力 (1200x1200, 1400x1400, 1600x1600, 2048x2048)。
+    * **損失関数:** マスクヘッド損失の重みを増加 (HTCベースモデル)。
+    * **最適化:** SGDまたはAdamW。Cosine Scheduler + Warmup。
+    * **Augmentation:** 軽度 (Flip, AutoAugment(Shear, Translate, Color, Equalize), ShiftScaleRotate) と重度 (上記に加え、輝度/コントラスト/色相変換、PhotoMetricDistortion, MinIoURandomCrop, CutOut, Rotate, GridDistortion, OpticalDistortionなど)。
+    * **TTA:** FlipベースTTA、マルチスケール推論 (ViT-Adapter)。
+    * **アンサンブル:** 5モデルのWBF。
+    * **後処理:** Erosion + Dilationによるマスク平滑化。
 
-**4位 (SDSRV.AI - GoN team)**
+**[4位](https://www.kaggle.com/competitions/hubmap-hacking-the-human-vasculature/discussion/428994)**
 
-- **アプローチ:** 信頼できるCV（Dataset1の一部をValidation）に基づき、多様なモデル（2段階モデル、単段階モデル）をアンサンブル。後処理でスコアを調整。
-- **アーキテクチャ:** CascadeRCNN (ResNeXt, RegNet), MaskRCNN (SwinT), HybridTaskCascade (HTC, Re2Net), YOLOv6m。
-- **アルゴリズム:** AdamW。Multi scale training。WBF。Mean Average Mask Ensemble。スコア調整式。
-- **テクニック:**
-    - **CV戦略:** Dataset1の20%をValidationとし、残りのDataset1とDataset2で学習。
-    - **前処理:** 重複アノテーション除去。
-    - **学習:** "blood_vessel"と"unsure"クラスのみで学習（Glomerulusは除外）。2段階学習（Stage1: 全訓練データ、Stage2: Dataset1データのみでFine-tuning）。AugmentationはMulti scale trainingのみ。
-    - **モデル選択:** 精度と多様性を考慮し、CascadeRCNN, MaskRCNN, HTCに加え、高MARを示すYOLOv6mを採用。
-    - **アンサンブル:** bboxはWBF、マスクはMean Averageでアンサンブル。
-    - **後処理:** 小面積インスタンス除去(<80px)。マスクスコアを用いてインスタンススコアを再計算 (`score_instance = score_bbox * mean(mask[mask > 0.5])`)。
-    - **Dilation:** CVスコアとの相関を信頼し、適用せず。
+* **アプローチ:** 複数アーキテクチャ（インスタンスセグメンテーション + 物体検出）のアンサンブル。Dataset1を重視したTrain/Val分割と2段階学習。
+* **アーキテクチャ:** Cascade R-CNN (ResNeXt, RegNet), Mask R-CNN (Swin-T), HybridTaskCascade (Res2Net), YOLOv6m (物体検出)。
+* **アルゴリズム:** WBF (bboxアンサンブル用)、単純平均 (マスクアンサンブル用)。
+* **テクニック:**
+    * **CV/データ:** Dataset1の一部 (84枚) をValidationとし、残りのDataset1 (338枚) + Dataset2 (1211枚) をTrainingに使用。重複アノテーションの除去。
+    * **学習:** 血栓 (blood_vessel) と 不確定 (unsure) クラスのみで学習（糸球体は不使用）。2段階学習（Stage1: 全Trainデータ → Stage2: Dataset1のみでファインチューン）。
+    * **最適化:** AdamW + Warmup。
+    * **Augmentation:** マルチスケール学習 [(512^2) - (1024^2)] のみ（デフォルトAugmentationは不安定だったため削減）。
+    * **アンサンブル:** 5モデル。RPNボックスとROIボックスそれぞれでWBFを実行。マスクは平均化。
+    * **後処理:** 小マスク除去 (面積 < 80)。インスタンススコアのリファイン (`score_bbox * mean(mask[mask > 0.5])`)。
 
-**5位**
+**[5位](https://www.kaggle.com/competitions/hubmap-hacking-the-human-vasculature/discussion/429873)**
 
-- **アプローチ:** Dataset1のみを使用し、高解像度学習とTTA、Cluster-NMSで精度を追求。単一モデル（HTC-DB-B）で高スコア達成。
-- **アーキテクチャ:** HTC-DB-B (Hybrid Task Cascade with Deformable BackBone - Swin-B)。DetectoRS-R101も試行。
-- **アルゴリズム:** Cluster-NMS with DIoU。SWA (Stochastic Weight Averaging)。
-- **テクニック:**
-    - **データ:** Dataset1のみ使用（5 folds CV）。COCO事前学習重み利用。
-    - **学習:** MMDetection V2。デフォルト1xスケジュール + 1x SWA。高解像度マルチスケール学習 ((512,512)-(1536,1536))。
-    - **Augmentation:** RandomFlip, Rotate90のみ。
-    - **推論:** 大規模TTA（複数スケール x Flip x Rotate）。R-CNNのNMSをWeighted Cluster-NMS (DIoU) に置き換え。
-    - **アンサンブル:** 複数FoldのアンサンブルはCV/Publicを低下させたため単一Foldモデルを提出（ただしPrivateスコアはアンサンブルの方が若干良かった）。
-    - **その他:** より大きなモデル(HTC-DB-L)はCV/Publicは低かったがPrivateは高かった。Copy-paste, MixUp, HSV, CutOutなどのAugmentationは効果なし。Dataset2/3利用（事前学習、疑似ラベル）も効果なし。
+* **アプローチ:** Dataset1のみを使用し、高解像度入力とHTCモデルに注力。単一Foldモデルで提出。
+* **アーキテクチャ:** HTC-DB-B (HTC + Swin-B + DetectoRS)。HTC-DB-Lも試行。
+* **アルゴリズム:** Weighted Cluster-NMS with DIoU (R-CNNのNMS代替)。
+* **テクニック:**
+    * **CV/データ:** Dataset1のみを使用。5 Fold分割。COCO事前学習重みを使用。
+    * **学習:** Mmdet2使用。1x schedule + 1x SWA。
+    * **入力:** マルチスケール学習 [(512^2) - (1536^2)]。
+    * **Augmentation:** RandomFlip, Rotate90。他のAugmentation（Copy-Paste, Mixup, HSV, Cutoutなど）は効果なし。
+    * **TTA:** マルチスケール [(640^2) - (1920^2)] + Flip (horizontal, vertical)。
+    * **Dataset2/3の利用:** 事前学習やPseudo Labelは効果なし。
+    * **アンサンブル:** FoldアンサンブルはCV/Public LBを低下させたが、Private LBは向上。
 
-**7位**
+**[7位](https://www.kaggle.com/competitions/hubmap-hacking-the-human-vasculature/discussion/428295)**
 
-- **アプローチ:** Mask R-CNN (Swin Transformer) をベースとし、Dataset2/3の疑似ラベルを用いて学習データを拡張。アンサンブルとDilationでスコア向上。
-- **アーキテクチャ:** Mask R-CNN (Swin Transformer backbone, HTC RoI head)。
-- **アルゴリズム:** 不明（MMDetectionベースと推定）。Ensemble Detection Model (Sartoriusコンペ解法参照)。
-- **テクニック:**
-    - **疑似ラベル:** Dataset1で学習したモデル（Foldごと）を用いてDataset2, 3の疑似ラベルを作成。
-    - **学習:** Dataset1 + Dataset2 (元ラベル+疑似ラベル) + Dataset3 (疑似ラベル) でモデルを学習 (5 folds)。
-    - **Augmentation:** Random resize (768-1536), flip, Rot90, RandomBrightnessContrast, HueSaturationValue。
-    - **TTA:** Resize (1024, 1536), hvflip。
-    - **アンサンブル:** RPNとRoI Headの両方でアンサンブル（Sartoriusコンペ解法参照）。
-    - **後処理:** Dilation、小マスク除去、Glomerulus領域重複マスク除去。
-    - **Dilation:** Dataset1のみ学習ではDilationなしの方がスコアが良かった経験から、Dataset2のノイズが原因と推測。疑似ラベル等でノイズの影響を低減し、Dilationあり/なしの差を縮小（最終的にはDilationありがLB/Private共に良好）。
+* **アプローチ:** Mask R-CNN (HTC) モデルをDataset1, 2, 3 (Pseudo Label) で学習。アンサンブルと後処理。
+* **アーキテクチャ:** Mask R-CNN (Swin Transformerバックボーン, HTC RoI head)。
+* **アルゴリズム:** RPN/RoI headレベルでのアンサンブル。
+* **テクニック:**
+    * **学習:** 3段階パイプライン（1. Dataset1で学習 → 2. Dataset2, 3にPseudo Label付与 → 3. Dataset1 + Dataset2(元ラベル+Pseudo) + Dataset3(Pseudo)で再学習）。
+    * **入力:** マルチスケール学習 (768-1536)。
+    * **Augmentation:** RandomResize, Flip, Rot90, RandomBrightnessContrast, HueSaturationValue。
+    * **TTA:** マルチスケール (1024, 1536) + Flip (hvflip)。
+    * **アンサンブル:** RPN提案とRoI head出力の両方でアンサンブル（Sartoriusコンペの手法参照）。
+    * **後処理:** Dilation、小マスク除去、糸球体内マスク除去。
+    * **Dilation:** Dataset1のみだとDilationなしの方が良いが、Dataset2/3を含めるとDilationありがLBで良かった（差は縮小）。
 
-**8位**
+**[8位](https://www.kaggle.com/competitions/hubmap-hacking-the-human-vasculature/discussion/429352)**
 
-- **アプローチ:** YOLOv8x-seg 単一モデル。強力なAugmentationとマスク閾値の調整が鍵。
-- **アーキテクチャ:** YOLOv8x-seg。
-- **アルゴリズム:** AdamW、Cosine LR。
-- **テクニック:**
-    - **CV戦略:** 特殊な2-Fold CV (WSI 1,3 vs 2,4)。マスク閾値の最適値がFold間で大きく異なることを発見。
-    - **学習:** 全訓練データを使用。3クラス（blood_vessel, glomerulus, unsure）で学習。強力なAugmentation (mosaic, mixup, copy_paste, 色・幾何変換多数)。
-    - **推論:** 学習時より大きい画像サイズ(768)を使用。異なるマスク閾値(0.5と0.2)で2つ提出。閾値0.5がPrivateで高スコア、0.2がPublicで高スコア。
-    - **Augmentation:** yolov8デフォルトに加え、hsv, degrees, translate, scale, shear, perspective, flipud, fliplr, mosaic, mixup, copy_pasteなど多数設定。
+* **アプローチ:** 単一のYOLOv8x-segモデル。強力なAugmentationとマスク閾値の調整に注力。
+* **アーキテクチャ:** YOLOv8x-seg。
+* **アルゴリズム:** (YOLOv8デフォルト)
+* **テクニック:**
+    * **CV/データ:** 全学習データ (Dataset1+2) を使用。WSIに基づく2 Fold分割 (Fold1: WSI1,3 / Fold2: WSI2,4)。全3クラスで学習。
+    * **学習:** YOLOv8設定。imgsz=512, batch=64, AdamW, Cosine LR。
+    * **Augmentation:** 強力な設定 (HSV, degrees=45, translate=0.1, scale=0.5, shear=15, perspective=0, flipud=0.5, fliplr=0.5, mosaic=1.0, mixup=1/3, copy_paste=1/3)。
+    * **マスク閾値:** 最適なマスク二値化閾値がFoldによって大きく異なることを発見 (例: 0.2 vs 0.5)。最終提出では2つの異なる閾値 (0.5と0.2) を使用。
+    * **推論:** 入力サイズ768 (512より良好)。
+    * **効果がなかったこと:** セマンティックセグメンテーションとの組み合わせ、高解像度学習 (768, 1024)、TTA(Rot90)。
 
-**9位**
+**[9位](https://www.kaggle.com/competitions/hubmap-hacking-the-human-vasculature/discussion/428447)**
 
-- **アプローチ:** 2段階パイプライン（物体検出→セマンティックセグメンテーション）。Dataset2のアノテーションをモデル予測に基づいて更新。YOLO系モデルのアンサンブルとWBF。
-- **アーキテクチャ:** 検出: YOLOv5x6, YOLOv7x, YOLOv8l, YOLOv8x。セグメンテーション: EfficientNetB1-UNet, EfficientNetB2-UNet。
-- **アルゴリズム:** WBF。
-- **テクニック:**
-    - **Dataset2アノテーション更新:** Dataset1で学習したモデルでDataset2を予測し、特定の条件（IoU>0.4など）を満たす予測bboxで元アノテーションを置換（主に拡大方向）。更新後データで学習するとDilationの影響が減少。
-    - **CV戦略:** 特殊な2-Fold CV。
-    - **検出モデル:** 2クラス（blood_vessel, glomerulus）で学習（unsure無視）。YOLOv5/v7/v8コードを改変し90度回転Augmentation追加。
-    - **セグメンテーションモデル:** 元アノテーションのbboxをマスクとして学習。3クラス（unsure含む）で学習。
-    - **推論/アンサンブル:** 検出モデルは大規模アンサンブル（10モデル x 16 TTA）。WBFでbboxを統合。セグメンテーションモデルはTTAなしでアンサンブル。
-    - **後処理(Dilation):** 最終マスクのDilationではなく、検出bboxを3%拡大する手法を採用（LB +0.005）。
+* **アプローチ:** 2段階パイプライン（物体検出→セマンティックセグメンテーション）。Dataset2のbboxアノテーションをDataset1モデルで更新。
+* **アーキテクチャ:**
+    * 検出: YOLOv5x6, YOLOv7x, YOLOv8l, YOLOv8x。
+    * セグメンテーション: EfficientNetB1/B2-UNet。
+* **アルゴリズム:** WBF (検出アンサンブル用)。
+* **テクニック:**
+    * **Dataset2更新:** Dataset1で学習したモデルを用い、Dataset2のbboxアノテーションを予測bboxで更新（IoU>0.4などで条件付け）。これによりDilationなしでもLBスコアが向上。
+    * **CV:** 特殊な2 Fold分割。
+    * **検出学習:** 2クラス (blood_vessel, glomerulus) で学習 ("unsure"は無視)。YOLOコードを修正しRot90 Augmentation追加。
+    * **セグメンテーション学習:** 元のbboxを入力マスクとして使用。3クラス ("unsure"も含む) で学習。
+    * **推論:** 検出は大規模アンサンブル (5モデル x 2 Fold x 16 TTA)。セグメンテーションはアンサンブルのみ (4モデル)。
+    * **TTA (検出):** Flip, Rot90, Multi-scale (8x2=16)。
+    * **アンサンブル (検出):** WBF (IoU=0.7)。
+    * **後処理:** Bboxサイズを3%拡大 (軽微なDilation)。
 
-**10位**
+**[10位](https://www.kaggle.com/competitions/hubmap-hacking-the-human-vasculature/discussion/428301)**
 
-- **アプローチ:** YOLOv7ベース。Dataset1でのファインチューニングを重視（Dilation回避のため）。疑似ラベル活用。
-- **アーキテクチャ:** YOLOv7 (セグメンテーションヘッドの解像度変更？)。
-- **アルゴリズム:** 不明（YOLOv7デフォルトベースと推定）。
-- **テクニック:**
-    - **学習:** ベースは公開ノートブック。疑似ラベル（ds1で学習したモデルでds2, ds3を予測）を追加して学習後、最後にds1のみでファインチューニング。
-    - **入力解像度:** セグメンテーションヘッドの解像度に合わせて入力解像度を変更？ (640->160)。
-    - **推論解像度:** 学習時(640)より高い解像度(800)で推論したモデルが最高スコア。
-    - **Dilation:** Dataset1でのファインチューニングにより不要と考え、使用せず。
-    - **その他:** 疑似ラベルの2回適用、YOLOv8、mmdetection、U-NetによるBBox内セグメンテーション、WBFは効果がなかったか、実装できなかった。
-
+* **アプローチ:** YOLOv7を用いた単一モデルベースのアンサンブル。Dataset1でのファインチューニングを重視（Dilation回避目的）。
+* **アーキテクチャ:** YOLOv7 (セグメンテーションヘッド付き)。
+* **アルゴリズム:** (YOLOv7デフォルト + 変更)
+* **テクニック:**
+    * **入力解像度:** YOLOのセグメンテーションヘッド解像度に合わせて入力解像度を調整 (例: 640 -> 160)。高解像度入力 (800) も試行。
+    * **学習:** 全データ (Dataset1+2) + Pseudo Label (Dataset3) で学習後、Dataset1のみでファインチューニング。
+    * **アンサンブル:** Foldアンサンブル + Pseudo Labelモデル。
+    * **効果がなかった/試せなかったこと:** 複数回のPseudo Labeling, YOLOv8, Mmdetection, UNetによるマスク補正, タイル結合, Stain Augmentation, 外部データ。WSF(Weighted Segments Fusion)はNMSより良くなかった。

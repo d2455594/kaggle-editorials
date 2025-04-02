@@ -1,100 +1,95 @@
 ---
 tags:
   - Kaggle
-  - 強化学習
-  - ゲームAI
 startdate: 2024-09-13
 enddate: 2024-12-13
 ---
-# FIDE & Google Efficient Chess AI Challenge
-https://www.kaggle.com/competitions/fide-google-efficiency-chess-ai-challenge
+# FIDE & Google - Efficient Chess AI Challenge
+[https://www.kaggle.com/competitions/fide-google-efficiency-chess-ai-challenge](https://www.kaggle.com/competitions/fide-google-efficiency-chess-ai-challenge)
 
 **概要 (Overview)**
 
-* **目的:** このコンペティションの目的は、高いレベルのチェスをプレイできるだけでなく、**計算資源（特に思考時間）の効率**にも優れたチェスAIエージェント（ボット）を開発することです。国際チェス連盟（FIDE）とGoogleがスポンサーとなっています。
-* **背景:** 現代のトップレベルのチェスエンジンは非常に強力ですが、その性能を発揮するために多くの計算資源を必要とすることがあります。このチャレンジは、強さだけでなく、限られた時間や計算能力で優れた判断を下せる、効率的なアルゴリズムやアプローチに焦点を当てています。
-* **課題:** 参加者は、チェスの対局において強い手（高いプレイ品質）を指す能力と、定められた計算資源（特に1手あたりの思考時間制限）を厳守する能力を両立させる必要があります。非常に強いが思考時間が長いボットは時間切れで負けたり、失格になったりする可能性があります。逆に、非常に速いが弱いボットは対局に勝てません。このトレードオフを最適化することが鍵となります。タスクは、他の参加者が提出したボットとチェスのトーナメント形式で対戦するプログラムを作成することです。
+* **目的:** このコンペティションの目的は、国際チェス連盟 (FIDE) と Google の共催により、非常に**限られた計算リソース**（CPU 1コア、メモリ 5MB、バイナリサイズ 64KB、思考時間 1手10秒）の下で動作する、可能な限り強力な**チェスAI（チェスエンジン）** を開発することです。
+* **背景:** 近年のチェスAIは人間を遥かに凌駕する強さを達成しましたが、その多くは高性能なハードウェアや大規模なニューラルネットワークに依存しています。このコンペティションは、「効率性 (Efficiency)」に焦点を当て、スマートフォンや低スペックなデバイスなど、リソースが限られた環境でも高性能を発揮できるチェスAI技術の開発を促進することを目的としています。
+* **課題:**
+    * **極端なリソース制約への対応:** 特に**バイナリサイズ 64KB**という厳しい制限の中で、強力な評価関数と探索アルゴリズムを実装する必要があります。メモリ使用量 (5MB) と CPU コア数 (1) も大きな制約です。
+    * **短い思考時間:** 1手あたり平均10秒という短い時間で、可能な限り深い読みを行い、最善手を選択する必要があります。Short Time Control (STC) に特化した探索戦略が求められます。
+    * **評価関数と探索のトレードオフ:** 高精度な評価関数（特に NNUE）はサイズと計算コストが大きいため、サイズ制限内で実装可能な評価関数（小型 NNUE、HCE、またはその組み合わせ）を選択し、探索アルゴリズムとのバランスを取る必要があります。
+    * **コードサイズ最適化:** 不要な機能の削除、データ構造の圧縮、コンパイラ選択（Clang vs GCC）、コンパイルフラグの最適化、関数属性の利用、外部ライブラリ依存の排除など、あらゆる手段を駆使してバイナリサイズを削減する必要があります。
+    * **メモリ使用量の削減:** Transposition Table (置換表) や各種履歴テーブルのサイズ削減、メモリ効率の良いデータ構造の採用などが求められます。
 
 **データセットの形式 (Dataset Format)**
 
-このコンペティションは、典型的な機械学習コンペティションとは異なり、静的なデータセットを処理するものではなく、**シミュレーション/エージェントベース**のコンペティションです。「データ」として提供されるものは主に以下の通りです。
+このコンペティションは、機械学習モデルではなく**チェスエンジン（実行可能プログラム）** を提出する形式です。したがって、主催者から提供される標準的な「データセット」はありません。
 
-1.  **チェス対局環境:** 提出されたボット同士が対局を行うための標準化された環境。これには、ゲームの状態（盤面、手番など）をボットに伝え、ボットからの指し手を受け取るためのインターフェースが含まれます（例: `python-chess` ライブラリを利用）。
-2.  **スターターキット/サンプルコード:** ボットの基本的な構造や、対局環境とのやり取りの方法を示すサンプルコード。参加者はこれを基に自身のボットロジックを実装します。
-3.  **ルール:** トーナメントの形式、持ち時間（例: 1手あたりX秒、1局あたりY分）、使用可能な計算資源の制限（CPU、メモリ制限の可能性も）、チェスのルール（標準的なチェス）などが詳細に規定されます。
-
-**提出形式:** 参加者は、自身のチェスボットのロジックを実装したコード（通常はPythonスクリプトや、依存関係を含めたDockerコンテナ）を提出します。大規模な訓練用データセットが提供されるわけではありません。
+* **学習データ（参加者準備）:** エンジンの評価関数（特にNNUE）を学習させるために、大量のチェス局面データや棋譜が必要になります。参加者は公開されているデータセット（例: Leela Chess Zero データ、Stockfish自己対局データなど）を利用したり、自身で生成したりしました。
+* **オープニングブック:** 対局開始時の定跡を指定するファイル。コンペティションの評価環境で使用される特定のオープニングブックに合わせてエンジンを調整する必要がある場合があります。コンペでは特定の`polyglot.bin`ファイルが使用されました。
 
 **評価指標 (Evaluation Metric)**
 
 * **指標:** **Eloレーティング (Elo Rating)**
-* **計算方法:**
-    1.  提出された全ての有効なボットが、互いに多数のチェスの対局を行う総当たり戦またはスイス式トーナメントが開催されます。
-    2.  これらの対局の勝敗結果（勝ち、負け、引き分け）に基づいて、各ボットの強さを示すEloレーティングが統計的に計算されます。
-    3.  コンペティションの最終ランキングは、このEloレーティングの高さによって決定されます。Eloレーティングが高いほど、そのボットがトーナメントで優れた成績を収めた（＝強い）ことを意味します。
-* **効率性の組み込み:** 評価の重要な側面として、ボットは**指定された計算資源の制限（特に思考時間）を厳守しなければなりません**。制限時間を超えたボットは、その対局で負け扱いになったり、失格になったりする可能性があります。これにより、Eloレーティングには計算効率の要素が間接的かつ強力に反映されます。効率が悪ければ高いレーティングを得ることはできません。
+* **計算方法:** 提出されたチェスエンジン同士が、指定されたリソース制限と時間制御の下で多数回の対局を行います。その対局結果（勝ち、負け、引き分け）に基づいて、Kaggleの評価システム（Glickoレーティングシステムまたは類似のもの）により、各エンジンの相対的な強さを示すEloレーティングが推定されます。
+* **意味:** チェスプレイヤーやエンジンの強さを比較するための標準的な指標です。他の提出物との相対的な強さを示し、数値が**高い**ほど強いエンジンであることを意味します。対局結果に基づくため、対戦相手や組み合わせによる運の要素も含まれます。
 
-要約すると、このコンペは、計算効率（特に思考時間の短さ）とチェスの強さを両立させたAIボットを作成し、提出されたボット同士のトーナメントでの成績（Eloレーティング）を競うシミュレーションベースのチャレンジです。「データ」は主に対局環境とルールであり、評価は効率性を加味した上でのEloレーティングによって行われます。
+要約すると、このコンペティションは、極めて厳しいリソース制限下（特に64KBバイナリサイズ）で最強のチェスエンジンを開発するプログラミングチャレンジです。評価は提出されたエンジン同士の対局結果に基づくEloレーティング（高いほど良い）で行われます。コード最適化、評価関数と探索のバランス、STC戦略が鍵となります。
 
 ---
 
-**全体的な傾向:**
+**全体的な傾向**
 
-このコンペでは、非常に限られたリソース（サイズ、メモリ、時間）の中で、強いチェスエンジンを開発することが課題です。上位解法では、既存の強力なオープンソースエンジン（Stockfish、Cfish）をベースとし、リソース制約を満たすように軽量化するアプローチが主流です。評価関数（NNUEまたはHCE）、探索アルゴリズムの最適化、パラメータチューニング（SPSA）、バイナリサイズの圧縮などが重要なテクニックとして活用されています。
+このコンペティションでは、チェスエンジンの世界でデファクトスタンダードとなっている **Stockfish**、またはそのC言語移植版である **Cfish** をベースにした開発が上位を独占しました。最大の課題である**64KBという極めて厳しいバイナリサイズ制限**と5MBのメモリ制限を満たすため、参加者は徹底的な**コード最適化と機能削減**を行いました。
 
-**各解法の詳細:**
+**最適化技術**としては、以下が広く用いられました。
+* **機能削除:** マルチスレッド、テーブルベース対応、NNUE（初期段階や一部チーム）、Polyglotオープニングブックサポート、UCI（Universal Chess Interface）の不要部分、デバッグ用コードなど、コアな探索と評価に必須でない機能の徹底的な削除。
+* **データ構造圧縮:** Transposition Table (置換表)、各種履歴テーブル (Continuation History, Correction Historyなど)、Pawn Hash Table などのサイズ削減や、よりメモリ効率の良い実装（ハッシュテーブル化など）への変更。Magic Bitboardの代替実装。
+* **コンパイル最適化:** `Clang` コンパイラ（特に version 10）が `GCC` よりも小さいバイナリを生成する傾向があり、多くの上位チームで採用。`-O3` (速度最適化) と `-Os` (サイズ最適化) の使い分け、サイズ削減のための特定フラグ (`-fno-unwind-tables`, `-fvisibility=hidden` など) の利用。
+* **コードレベル最適化:** `__attribute__((minsize, cold))` などを用いて、パフォーマンスに影響の少ない関数のコードサイズを優先的に削減。インライン展開の抑制。
+* **ライブラリ依存排除:** 標準C++ライブラリ (`libstdc++`) や数学ライブラリ (`libm`)、スレッドライブラリ (`lpthread`) への依存をなくし、必要な関数を自前で実装。
+* **バイナリ圧縮:** 最終的な実行ファイルを `xz` (LZMA) や `upx` などで圧縮し、提出用スクリプト内で展開。
 
-**2位 (Approvers)**
+**評価関数**については、主に2つのアプローチが見られました。
+* **小型NNUE:** Stockfish由来のNNUEアーキテクチャを大幅に小型化（層数、ニューロン数削減）し、量子化 (int8/int16) を施してバイナリサイズ制限内に収める。入力特徴量の削減（Pawn配置やKingの位置に関するミラーリング活用）も重要。
+* **HCE + α:** Stockfish 16まで存在したHand-Crafted Evaluation (HCE) をベースとし、非常に小さなMLPなどを追加して評価を補強する。
 
-- **アプローチ:** StockfishのC移植版（Cfish）をベースに、サイズ、メモリ、時間制限、オープニングブックに合わせて最適化。ドメイン知識と一般的な開発スキルを組み合わせる。
-- **アーキテクチャ:** NNUE（ニューラルネットワーク評価関数）を導入。シンプルなNNUEアーキテクチャ（768入力 -> 64隠れ層 -> 8出力）。
-- **アルゴリズム:** 探索アルゴリズム（Iterative Deepening、Quiescence Searchなど）をSTC（Short Time Control）向けに最適化。SPRT（Sequential Probability Ratio Test）とSPSA（Simultaneous Perturbation Stochastic Approximation）によるテストとチューニング。
-- **テクニック:**
-    - **探索機能:** STC Elo Gainer Optimization、STC Fail-High Handling、Quiescence Search Time Checking、Sudden Death Time Control Optimizationなど、短時間思考向けの最適化を導入。VVLTC（Very Long Long Time Control）向けの最適化も一部組み込み。
-    - **評価:** シンプルなNNUEアーキテクチャを採用。3段階の段階的学習とSPSAによる最終調整。ネットワークは8bit/16bitに量子化。
-    - **サイズ最適化:** 不要な機能の削除、`gcc` から `clang` への切り替え、コンパイラフラグの調整、`#pragma` ディレクティブ、関数属性（`minsize`, `cold`, `section(".text.small")`）の適用、`libm` と `lpthread` への依存性をカスタム実装で排除し、シングルスレッド化。
-    - **テスト:** SPRTを使用して変更の有効性を統計的に評価。SPSAを使用してパラメータをチューニング。OpenBenchによる分散コンピューティングで約20Mゲームを実行。
+**探索アルゴリズム**では、1手10秒という**Short Time Control (STC)** に特化した最適化が重要でした。ルート探索での奇数plyスキップ、Fail-High時の即時枝刈り、Quiescence Search中の時間チェック、終盤の時間配分調整などが有効とされました。また、Stockfishコミュニティで開発された探索改善手法（各種Correction History、Counter Move Pruning、Fail-Soft/Hard Mixなど）の導入も行われました。
 
-**3位 ("Fix the bugs?")**
+**パラメータチューニング**には、**SPSA (Simultaneous Perturbation Stochastic Approximation)** が広く用いられ、探索や評価に関する多数の定数を自動で最適化していました。
 
-- **アプローチ:** StockfishのC移植版（Cfish）をベースに、メモリとサイズの制約を満たすように最小化。NNUE評価関数を設計・学習。探索アルゴリズムの改善。SPSAによるチューニング。
-- **アーキテクチャ:** NNUE評価関数。シンプルなフィードフォワードニューラルネットワーク。
-- **アルゴリズム:** 探索アルゴリズム（AlphaBeta pruning、fail-soft/fail-hardの混合、Late Move Reductions Deeperなど）を改善。SPRTとSPSAによるテストとチューニング。
-- **テクニック:**
-    - **メモリとサイズの最小化:** 不要な機能の徹底的な削除（tablebases, opening books, NNUE実装の初期版, マルチスレッド, etc.）。Kaggleビルド専用のプリプロセッサ定義。エンジン入出力の最小化。`clang` と特定のコンパイラフラグを使用してバイナリサイズを削減。非クリティカルな関数に属性を付与。Pythonラッパーの難読化と圧縮。
-    - **エンジン改善:** Pawn Correction History、Non-Pawn Correction History、Minor/Major Correction History、Counter Correction History、Counter Move Pruningの改善、fail-softとfail-hardの混合、LMRの改善、Prior Counter Move Bonus、Altair Fail-Soft Multicutなどのパッチを適用。
-    - **NNUE:** Grapheusツールを使用して、Etherealエンジンによる自己対局データで学習。768入力（キングミラーリング、ポーンの非占有マス除去）のシンプルなアーキテクチャ。バッチ勾配降下法とADAMオプティマイザを使用。2段階の学習（50/50 eval/WDL、Pure WDL）。int8量子化と重み転置などの圧縮トリック。
+**テストと検証**には、**SPRT (Sequential Probability Ratio Test)** が用いられ、変更が統計的に有意な改善をもたらすかを確認しながら開発が進められました。**OpenBench** などの分散テスト環境も活用されました。
 
-**4位 (Lgeu)**
+**各解法の詳細**
 
-- **アプローチ:** Stockfish 16をベースに、HCE（手作り評価関数）に小さなニューラルネットワーク（NNUEではない）を追加してEloレーティングを向上。
-- **アーキテクチャ:** 3層のMLP（多層パーセプトロン）。
-- **アルゴリズム:** Stockfish 16の探索アルゴリズム。
-- **テクニック:**
-    - **ベースエンジンの選択:** Stockfish 16（HCEをサポートする最後のバージョン）を選択。
-    - **RAM使用量:** ポーンハッシュテーブル、Continuation History、Transposition Tableのサイズを削減。不要なモジュールを削除。ルークのMagic BitboardをCFishの古典的なアプローチに置き換え。libstdc++への依存性を排除。
-    - **評価関数の改善:** HCEを拡張する3層MLPを追加。入力特徴量は99個。NNUEのClipped ReLUを使用。MSE損失関数で学習。QAT（Quantization Aware Training）を試行。
-    - **トレーニング:** `kaggle-environments` で約7万ゲームを実行し、探索中に遭遇した局面を確率的に保存してトレーニングデータとして使用。HCEベース、NNUEベース、実験的な評価関数を持つエージェントを使用。
-    - **提出戦略:** HCEのみのエージェントとNN強化エージェントの両方を提出。
+**[2位](https://www.kaggle.com/competitions/fide-google-efficiency-chess-ai-challenge/discussion/569891)**
 
-**9位 (ymgaq)**
+* **アプローチ:** Cfishベース + 小型NNUE。STC特化探索。
+* **アーキテクチャ/評価:** NNUE (768(入力)→64(Hidden)→1x8(出力 Buckets))。SCReLU活性化。Piece Count Bucketing。入力704次元 (Pawn/King Mirroring)。量子化(int8/int16)。
+* **アルゴリズム:** Stockfish探索 + NNUE評価。
+* **テクニック:** 3段階NNUE学習 + SPSAチューニング。STC探索最適化 (ルート奇数plyスキップ, Fail-High処理, QS時間チェック, Sudden Death時間管理)。サイズ最適化 (Clang, 最適化フラグ, 関数属性, libm/lpthread排除)。
 
-- **アプローチ:** StockfishのC移植版（Cfish）をベースに、NNUEを削除してHCEのみを使用。メモリ最適化、バイナリサイズ圧縮、探索の強化、SPSAによるパラメータチューニング。
-- **アーキテクチャ:** HCE（手作り評価関数）のみを使用。
-- **アルゴリズム:** Stockfish16のHCE探索アルゴリズムを参考に修正。SPSA（Simultaneous Perturbation Stochastic Approximation）によるパラメータチューニング。
-- **テクニック:**
-    - **ベースプログラムの選択:** Cfishを選択（glibcによる低メモリ消費、Kaggleのシングルコア環境での探索速度）。
-    - **メモリ最適化:** NNUEを削除。Transposition Table、Counter Move History、Material Table、Pawn Hash Tableのサイズを削減。
-    - **バイナリサイズ圧縮:** 不要な機能やUCIオプションを削除。コンパイルコマンドの最適化（`-ffunction-sections -fdata-sections -Wl,--gc-sections`）。`strip` コマンドを使用。`upx --lzma` でバイナリを圧縮。
-    - **探索の強化:** Cfishの探索をStockfish16のHCE探索メソッドとパラメータに近づけるように修正。O3最適化を使用。
-    - **SPSA:** シンプルなカスタムSPSAスクリプト（cutechess-cliを使用）をローカルマシンで実行し、パラメータをチューニング。
+**[3位](https://www.kaggle.com/competitions/fide-google-efficiency-chess-ai-challenge/discussion/569874)**
 
-**10位 (Niboshi)**
+* **アプローチ:** Cfishベース + 小型NNUE。多数の探索改善導入。
+* **アーキテクチャ/評価:** NNUE (PSQBB+King/Pawn特徴 -> 8 -> 16 -> 1)。ReLU活性化。Piece Count Bucketing。Dual FT構造。入力特徴量削減 (Pawn/King Mirroring)。
+* **アルゴリズム:** Stockfish探索 + NNUE評価。
+* **テクニック:** 2段階NNUE学習 (50/50 eval/WDL → Pure WDL)。SPSAチューニング (探索・評価)。探索改善 (Correction History各種, Counter Move Pruning, Fail-Soft/Hard Mix, LMR Deeper, Prior Counter Move Bonusなど)。サイズ最適化 (Clang, 最適化フラグ, 関数属性)。Pondering実装。Pythonラッパー&バイナリ圧縮(xz)。
 
-- **アプローチ:** Stockfish 4、Stockfish 16を経て、RAM制約のため最終的にCfishを使用。HCEを無効化し、NNUEのみに依存。バイナリサイズ効率の良いネットワークを探索。
-- **アーキテクチャ:** CNNとDenseネットワークを組み合わせたカスタムNNUEネットワーク。
-- **アルゴリズム:** NNUE評価関数。
-- **テクニック:**
-    - **ベースプログラムの選択:** RAM制約のためCfishを使用。
-    - **NNUE:** HCEを無効化し、NNUEのみを使用。バイナリサイズ効率の良いネットワークを設計（CNNと隣接位置で重みを共有するDenseネットワークの組み合わせ）。学習データはLeelaとStockfishの生成データの混合。
-    - **その他の変更:** Transposition tableとContinuation Historyにハッシュテーブルを使用しサイズを削減。コンパイルオプションの調整（nnue.cは-O3、その他は-Os）。未使用の機能などを削除。
+**[4位](https://www.kaggle.com/competitions/fide-google-efficiency-chess-ai-challenge/discussion/563173)**
+
+* **アプローチ:** Stockfish 16 HCEベース + 小型MLP追加。
+* **アーキテクチャ/評価:** HCE + 3層MLP (入力99次元 HCE内部特徴量 -> 14x2次元 -> 32次元 -> 1次元)。Clipped ReLU活性化。
+* **アルゴリズム:** Stockfish探索 + HCE/NN評価。
+* **テクニック:** NN出力はHCE値に0.5倍して加算。NN学習は自己対局データ、MSE損失。メモリ最適化 (Magic Bitboard代替、libstdc++排除)。サイズ最適化。
+
+**[9位](https://www.kaggle.com/competitions/fide-google-efficiency-chess-ai-challenge/discussion/567106)**
+
+* **アプローチ:** Cfishベース。HCEのみ (NNUE不使用)。探索改善とSPSAチューニング。
+* **アーキテクチャ/評価:** HCEのみ。
+* **アルゴリズム:** Stockfish探索 + HCE評価。
+* **テクニック:** Stockfish 16 HCEの探索手法・パラメータを移植。**SPSAチューニング**。メモリ最適化 (TTサイズ削減, Counter Move History削減, Material/Pawn Tableサイズ削減)。サイズ最適化 (-O3, strip, upx圧縮)。
+
+**[10位](https://www.kaggle.com/competitions/fide-google-efficiency-chess-ai-challenge/discussion/563866)**
+
+* **アプローチ:** Cfishベース。NNUEのみ (HCE無効)。独自NNUEアーキテクチャ。
+* **アーキテクチャ/評価:** 独自NNUE (15x15 CNN + 近傍重み共有Dense)。中間層896次元相当？
+* **アルゴリズム:** Stockfish探索 + NNUE評価。
+* **テクニック:** Leela/StockfishデータでNNUE学習。メモリ最適化 (TTサイズ削減, Continuation Historyハッシュ化)。サイズ最適化 (NNUE部-O3, 他-Os)。

@@ -5,128 +5,109 @@ startdate: 2023-07-18
 enddate: 2023-10-18
 ---
 # Bengali.AI Speech Recognition
-https://www.kaggle.com/competitions/bengaliai-speech
+[https://www.kaggle.com/competitions/bengaliai-speech](https://www.kaggle.com/competitions/bengaliai-speech)
 
 **概要 (Overview)**
 
-- **目的:** このコンペティションの目的は、**ベンガル語の音声データ**を入力として受け取り、それを正確な**ベンガル語のテキストに書き起こす**自動音声認識（Automatic Speech Recognition - ASR）システムを開発することです。
-- **背景:** 自動音声認識技術は、音声アシスタント、文字起こしソフトウェア、自動字幕生成など、様々な応用を可能にします。英語のようなリソースが豊富な言語ではASR技術は成熟していますが、ベンガル語のような比較的リソースの少ない言語では、高性能なモデルや大規模なデータセットが不足していることが課題です。このコンペティションは、ベンガル語のASR技術開発を促進することを目的としています（Bengali.AIはベンガル語のためのAI開発を推進する組織です）。
-- **課題:** ベンガル語特有の音声的特徴、文字（ベンガル文字）、文法、語彙に対応する必要があります。また、話者の違い（年齢、性別、アクセント、方言）、話速、感情、背景ノイズ、録音環境（マイク品質、反響）などによる音声の変動（音響変動性）に対処しなければなりません。さらに、利用可能な学習データが限られている可能性や、学習データに含まれていなかった未知語（Out-of-Vocabulary - OOV）への対応も課題となります。これは、音声シーケンスを入力とし、テキストシーケンスを出力とする典型的な**シーケンス・トゥ・シーケンス（Sequence-to-Sequence）** の課題です。
+* **目的:** このコンペティションの目的は、提供されたベンガル語の音声データに対して、その内容を正確なテキスト（句読点を含む）に書き起こす自動音声認識 (Automatic Speech Recognition, ASR) システムを開発することです。
+* **背景:** Bengali.AI は、ベンガル語の自然言語処理 (NLP) と音声技術の発展を促進するコミュニティ主導のイニシアチブです。ベンガル語は話者数が多い一方で、高品質な音声認識リソースが比較的少ない「低リソース言語」の一つとされています。このコンペティションを通じて、ベンガル語ASR技術の向上と、関連するデータセットやモデルの開発を促進することが期待されています。
+* **課題:**
+    * 提供された訓練データセットに**多くのノイズ**（不正確な書き起こし、低い音質、短い音声断片など）が含まれており、これを適切に処理・フィルタリングする必要があること。
+    * ベンガル語という**低リソース言語**であるため、利用可能な高品質なラベル付き学習データが限られていること。
+    * 多様な話者、アクセント、録音環境、発話スタイル（読み上げ、自発話）に対応できる**頑健なモデル**を構築すること。
+    * 音声認識だけでなく、文の区切りを示す**句読点（। , ? など）**も正確に予測する必要があること。
+    * 訓練データにはない未知のドメインや音響条件（OOD: Out-of-Distribution）のテストデータに対する**汎化性能**を確保すること。
+    * 長時間の音声ファイルを処理するための効率的な推論方法。
 
 **データセットの形式 (Dataset Format)**
 
-提供される主なデータは、ベンガル語の音声ファイルとその正確なテキスト書き起こし（トランスクリプション）です。
+提供される主なデータは、ベンガル語の音声ファイルとその書き起こしテキストです。
 
-1. **トレーニングデータ:**
-    
-    - `train.csv`: トレーニング用音声ファイルのメタデータ。通常、`id`（音声ファイルの一意な識別子）と、**ターゲット変数**となる正解のベンガル語テキスト書き起こし `sentence` の列を含みます。話者IDなどの追加情報が含まれる場合もあります。
-    - `train_mp3s/` (または類似の音声フォルダ): 実際の音声ファイルが格納されたディレクトリ。ファイル形式はMP3やWAVなどが考えられます。各ファイル名は `train.csv` の `id` に対応します。
-2. **テストデータ:**
-    
-    - `test.csv`: テスト用音声ファイルのメタデータ（例: `id`, ファイルパス）。
-    - `test_mp3s/` (または類似の音声フォルダ): 書き起こし対象となるテスト用の音声ファイル。
-    - テストデータには正解のテキスト書き起こし `sentence` は含まれません。
-3. **`sample_submission.csv`**:
-    
-    - 提出フォーマットのサンプル。通常、`id`（テスト音声ファイルの識別子）と `sentence`（モデルが予測したベンガル語のテキスト書き起こし）の列を持ちます。
+1.  **トレーニングデータ:**
+    * `train.csv`: 各音声ファイルに関するメタデータ。
+        * `id`: 音声ファイル名（拡張子なし）。
+        * `sentence`: **ターゲット変数**となる、書き起こされたベンガル語の文（句読点を含む場合がある）。
+        * `split`: データ分割情報 (`train` または `valid`)。
+        * その他、話者の性別 (`gender`)、アクセント (`accent`)、ドメインなどの情報。
+    * `train_mp3s/`: MP3形式の音声ファイル。ファイル名は `train.csv` の `id` に対応。
+    * **外部データ:** OpenSLR (37, 53), MADASR, Shrutilipi, Kathbath, Macro など、公開されている他のベンガル語音声データセットの利用が推奨・許可されています。
+2.  **テストデータ:**
+    * `test.csv`: テストセットの音声ファイルID (`id`) のリスト。
+    * `test_mp3s/`: 予測対象となるMP3形式の音声ファイル。
+3.  **`sample_submission.csv`**:
+    * 提出フォーマットのサンプル。
+        * `id`: テスト音声ファイルID。
+        * `sentence`: 予測された書き起こしテキスト（句読点を含む）。
 
 **評価指標 (Evaluation Metric)**
 
-- **指標:** **Word Error Rate (WER)** （単語誤り率）
-- **計算方法:** WERは、モデルが予測した書き起こし文と、正解の書き起こし文を単語単位で比較し、その間の誤り率を計算します。
-    1. 予測文を正解文に一致させるために必要な最小の編集操作（置換、挿入、削除）の回数を計算します（単語レベルのレーベンシュタイン距離に類似）。
-    2. WER = (置換された単語数 + 挿入された単語数 + 削除された単語数) / (正解文の総単語数)
-    3. 最終的なスコアは、テストデータセット全体の**WERの平均値**となります。
-- **意味:** WERは自動音声認識システムの性能評価における標準的な指標です。予測された書き起こしの単語レベルでの正確さを直接的に測ります。スコアは**低い**ほど（0に近いほど）、誤りが少なく、モデルの性能が良いと評価されます。WERが0であれば、完全に正確な書き起こしが行われたことを意味します。
+* **指標:** **WER (Word Error Rate)** 単語誤り率。
+* **計算方法:** 予測されたテキストと正解のテキストを比較し、単語レベルでの誤り（置換、削除、挿入）の総数を、正解テキストの総単語数で割って計算されます。
+    * `WER = (Substitutions + Deletions + Insertions) / Number of Words in Reference`
+    * 比較の前に、テキストは通常、小文字化、句読点や特定記号の除去などの正規化処理が行われます（ただし、このコンペでは句読点も評価対象）。
+* **意味:** 音声認識システムの精度を評価するための標準的な指標です。予測されたテキストが正解とどれだけ異なっているかを示します。スコアは**低い**ほど（0に近いほど）、認識精度が高いことを意味します。
 
-要約すると、このコンペティションは、ベンガル語の音声データをテキストに書き起こす自動音声認識（ASR）タスクです。データは音声ファイルと正解テキストで構成され、性能は予測テキストと正解テキストの単語レベルでの不一致率を示す Word Error Rate (WER、低いほど良い) によって評価されます。
+要約すると、このコンペティションは、ノイズの多いデータや低リソースという課題に対処しながら、ベンガル語の音声ファイルを句読点込みで正確にテキスト化するASRタスクです。データは音声ファイルとテキストラベルで構成され、性能は単語誤り率 (WER、低いほど良い) によって評価されます。
 
-----
+---
+
 **全体的な傾向**
 
-上位解法では、Transformerベースの事前学習済み音声認識モデル（特にOpenAI Whisper、Facebook Wav2Vec2系、AI4Bharat IndicWav2Vec）を、ベンガル語のデータセットでファインチューニングするアプローチが主流でした。コンペティション提供のデータに含まれるアノテーションノイズへの対応が重要であり、多くのチームがWER (Word Error Rate) やその他の指標を用いてデータのクリーニングやフィルタリングを行っています。性能向上のため、OpenSLR、IndicCorp、Common Voiceなどの外部音声・テキストデータや、TTS（Text-to-Speech）による合成音声、YouTube動画からの疑似ラベルデータなどが積極的に活用されました。データ拡張（Augmentation）も広く用いられ、スペクトログラムマスキング（SpecAugment）、ノイズ付加、速度・ピッチ変更、複数の短い音声を結合するConcat Augmentなどが有効でした。音声認識モデルの出力精度を高めるために、大規模なテキストコーパスで学習されたN-gram言語モデル（特にKenLM）を用いた後処理（リスコアリングやデコーディング時の統合）がほぼ必須のテクニックとなっています。さらに、最終的な評価指標には句読点も含まれるため、別途句読点予測モデル（主にToken ClassificationタスクとしてBERT系モデルをファインチューニング）を学習し、音声認識結果に句読点を付与するアプローチが一般的でした。複数モデルのアンサンブルも広く採用されました。
+このベンガル語音声認識コンペティションでは、データセットに含まれる**ノイズへの対処**が成功の鍵となりました。多くのチームが、提供されたデータの品質評価（WERやMOSスコアに基づくフィルタリング）や、信頼できる外部データセット (OpenSLR, MADASR, Shrutilipiなど) の活用、疑似ラベリング、TTSによるデータ合成を行いました。
+
+モデルアーキテクチャとしては、**事前学習済みモデルのファインチューニング**が主流で、特に **Whisper (medium)** や **Wav2Vec2 (IndicWav2Vec, XLS-R)** が広く採用されました。これらは大量のデータで事前学習されており、低リソース言語に対しても比較的高い性能を発揮します。
+
+性能向上のための重要なテクニックとして、**音声データ拡張**（ノイズ付加、速度・ピッチ変更、複数音声の連結、SpecAugmentなど）、**言語モデル (LM)** の統合（主にKenLMを用いたn-gramモデル）、そして**句読点予測モデル**の導入が挙げられます。句読点予測は、ASRモデルとは別に、BERT系のモデルを用いたトークン分類タスクとして解かれることが一般的でした。
+
+推論時には、長時間の音声を処理するための**チャンキング**や、デコード精度を高めるための**ビームサーチ**、そして複数のモデル出力を組み合わせる**アンサンブル**が有効でした。
 
 **各解法の詳細**
 
-**1位**
+**[1位](https://www.kaggle.com/competitions/bengaliai-speech/discussion/447961)**
 
-- **アプローチ:** WhisperモデルをSTT（音声テキスト変換）のベースとし、複数データソース（外部データ、TTS合成、疑似ラベル）と段階的な学習で精度を向上。別途学習した句読点モデルを適用。
-- **アーキテクチャ:** STT: OpenAI Whisper-medium。句読点: google/muril-base-cased (Token Classification)。
-- **アルゴリズム:** HuggingFace Trainer, AdamW (推定), Beam Search Decoding (num_beams=4)。
-- **テクニック:**
-    - **データ:** 外部音声データ（OpenSLR 37/53, MadASR, Shrutilipi, Macro, Kathbath）、GoogleTTS合成音声、疑似ラベルYouTube動画。テキスト正規化、句読点除去。WERベースのデータフィルタリング (WER<15%)。短い音声の結合。IndicCorp v2 (句読点モデル用)。
-    - **学習:** 段階的学習（OpenSLR+TTS → WERフィルタリングしたデータ追加 → 長い音声データ追加 → 疑似ラベルデータ追加）。
-    - **Augmentation:** スペクトログラムディザリング、時間/周波数マスキング、リサンプリング(16k->8k->16k)、速度/ピッチ変更(libsonic)。
-    - **トークナイザー:** ベンガル語テキストで学習したカスタムWhisperトークナイザー（12k語彙、推論高速化）。
-    - **句読点:** 4つのmuril-base-casedモデル（異なる層数）のアンサンブル。
-    - **推論:** チャンキング推論 (chunk_length_s=20.1s)。
+* **アプローチ:** Whisper + 句読点モデル。データクリーニングと疑似ラベル、TTSデータが鍵。
+* **アーキテクチャ:** ASR: OpenAI Whisper-medium。句読点: MuRIL-base-cased (TokenClassification)。
+* **アルゴリズム:** ASR: Sequence-to-Sequence。句読点: トークン分類。
+* **テクニック:** 複数外部データセット使用。GoogleTTSによる音声合成。疑似ラベリング (YouTube動画)。WERに基づくデータフィルタリング。独自Tokenizer学習 (推論高速化)。Augmentation (スペクトログラムマスキング、リサンプリング、速度/ピッチ変更)。句読点モデルは4モデルアンサンブル。推論時ビームサーチ (num_beams=4)、チャンク処理。
 
-**2位**
+**[2位](https://www.kaggle.com/competitions/bengaliai-speech/discussion/447976)**
 
-- **アプローチ:** IndicWav2VecをASRモデルのベースとし、多様なデータ拡張を適用。KenLM言語モデルとIndicBERTベースの句読点モデルで後処理。
-- **アーキテクチャ:** ASR: ai4bharat/indicwav2vec_v1_bengali (CTC Loss)。言語モデル: KenLM (6-gram)。句読点: ai4bharat/IndicBERTv2-MLM-Sam-TLM (Token Classification, LSTM Head)。
-- **アルゴリズム:** Cosine Schedule (ASR, 句読点), Beam Search Decoding (句読点)。WERベースのデータフィルタリング。チャンキング推論。
-- **テクニック:**
-    - **データ:** コンペデータ、外部音声データ（Shrutilipi, MADASR, ULCA）、ノイズデータ（MUSAN, DNS Challenge）。テキスト正規化、一部句読点保持(`.`, `-`)。外部テキストコーパス（IndicCorp, Bharat Parallel Corpus, Samanantar, 詩、ニュース、Hate Speech）。
-    - **Augmentation:** audiomentations (TimeStretch, RoomSimulator, Noise付加, Gainなど、読み上げ/自然発話で強度調整)、Concat Augment、SpecAugment。句読点モデル学習時のマスクトークン。
-    - **学習:** 全データで学習後、高WER(上位10%)データを除去して再学習。特徴エンコーダは凍結せず。複数サイクル学習（LR変更）。
-    - **句読点:** 3 Foldアンサンブル（異なるIndicCorpサブセットで学習）。Beam Searchデコーディング。
+* **アプローチ:** IndicWav2Vec + LM + 句読点モデル。重度なAugmentationとデータ処理。
+* **アーキテクチャ:** ASR: ai4bharat/indicwav2vec_v1_bengali (CTC)。LM: KenLM (6-gram)。句読点: ai4bharat/IndicBERTv2-MLM-Sam-TLM (LSTMヘッド付きTokenClassification)。
+* **アルゴリズム:** CTC、n-gram LM、トークン分類。
+* **テクニック:** 複数外部データセット使用。データ正規化。Augmentation (audiomentationsライブラリ使用: TimeStretch, RoomSimulator, 背景ノイズ/音楽付加, Gain, SpecAugment)。短い音声を連結するAugmentation。複数サイクル学習 (Cosine scheduler with restarts)。推論時チャンク処理。LMは大規模テキストコーパスで学習。句読点モデルはトークンマスキングAugmentation、3 Foldアンサンブル、ビームサーチ。
 
-**3位**
+**[3位](https://www.kaggle.com/competitions/bengaliai-speech/discussion/447957)**
 
-- **アプローチ:** IndicWav2VecベースのCTCモデルを品質フィルタリングしたコンペデータで学習。大規模テキストデータで学習したKenLMと言語モデル、XLM-RoBERTaベースの句読点モデルで後処理。音声強調技術も利用。
-- **アーキテクチャ:** ASR: ai4bharat/indicwav2vec_v1_bengali (CTC Loss)。言語モデル: KenLM (5-gram)。句読点: xlm-roberta-large/base (Token Classification)。音声強調: Demucs。
-- **アルゴリズム:** CTC Loss。テキスト正規化(bnUnicodeNormalizer)。Demucsによるノイズ除去。句読点モデルの損失重み調整。
-- **テクニック:**
-    - **データ:** コンペデータのみ（音声）。テキスト正規化、特定文字除去。WERベースのデータフィルタリング（validデータで学習したモデルでtrainデータを評価し、WER<0.75のみ使用、約70%）。外部テキストコーパス（IndicCorp, Common Voice, Fleurs, OpenSLR, OSCAR）。
-    - **学習:** 段階的学習（validデータのみ → 高品質trainデータ追加）。
-    - **推論:** 音声長でソートし動的パディング。音声強調（Demucs）を使用するかどうかを、トークン長の比較に基づいて動的に判断。
-    - **句読点:** 単語間の空白に句読点を予測。PADトークンの損失重みを0に設定。
+* **アプローチ:** IndicWav2Vec + LM + 句読点モデル。データフィルタリングとDemucsノイズ除去。
+* **アーキテクチャ:** ASR: ai4bharat/indicwav2vec_v1_bengali (CTC)。LM: KenLM (5-gram)。句読点: XLM-RoBERTa-large/base (TokenClassification)。
+* **アルゴリズム:** CTC、n-gram LM、トークン分類。
+* **テクニック:** データフィルタリング (validデータで学習したモデルでtrainデータを予測し、高WERデータを除外)。複数外部テキストデータでLM学習。推論時: 音声長でソートし動的パディング。Demucsによるノイズ除去 (適用有無を予測結果のトークン数で判断)。句読点モデルは損失重み調整 (PADトークン重み0)、アンサンブル。
 
-**4位**
+**[4位](https://www.kaggle.com/competitions/bengaliai-speech/discussion/447995)**
 
-- **アプローチ:** 大規模なWav2Vec2 (XLS-R 1B) モデルをCTC Lossでファインチューニング。KenLM言語モデルで後処理。複数段階の学習とカスタム学習率スケジュールが特徴。
-- **アーキテクチャ:** ASR: facebook/wav2vec2-xls-r-1b (CTC Loss)。言語モデル: KenLM (6/7-gram)。
-- **アルゴリズム:** CTC Loss, AdamW, カスタム学習率スケジュール (LinearWarmupCosine3LongTail)。テキスト正規化。
-- **テクニック:**
-    - **データ:** コンペデータのみ（音声）。WERベースのデータフィルタリング（別モデルで推論し上位70%）。外部テキストコーパス（IndicCorp v1/v2）。
-    - **Augmentation:** 基本Augmentation (TimeStretch, Gain, PitchShift, Noise)。複合Augmentation (3分割適用、2音声結合、両者の組み合わせ)。
-    - **学習:** 3段階学習（異なるランダムシード）。カスタム学習率スケジュール（複数コサインカーブ組み合わせ）。
-    - **言語モデル:** IndicCorp v1/v2を結合・クリーニングして学習。
-    - **後処理:** KenLM適用後、テキスト正規化とダーリ記号付与。
+* **アプローチ:** 大規模Wav2Vec2 + LM。複数ステージ学習とカスタムスケジューラ。
+* **アーキテクチャ:** ASR: facebook/wav2vec2-xls-r-1b (CTC)。LM: KenLM (7-gram)。
+* **アルゴリズム:** CTC、n-gram LM。
+* **テクニック:** データフィルタリング (別モデルでの予測WERに基づく)。3段階学習 (異なる乱数シード)。カスタム学習率スケジューラ (LinearWarmupCosine3LongTail)。Augmentation (TimeStretch, Gain, PitchShift, 背景ノイズ付加)。合成Augmentation (音声分割・結合)。IndicCorp v1/v2でLM学習。後処理 (正規化、Dari適用)。
 
-**5位**
+**[5位](https://www.kaggle.com/competitions/bengaliai-speech/discussion/448006)**
 
-- **アプローチ:** IndicWav2VecとWav2Vec2-XLS-R-1Bモデルをファインチューニング。データフィルタリングで学習安定化。複数ASRモデルの特徴量レベルでのアンサンブルが特徴。KenLMと言語モデル、XLM-RoBERTa句読点モデルで後処理。
-- **アーキテクチャ:** ASR: IndicWav2Vec, facebook/wav2vec2-xls-r-1b (CTC Loss)。アンサンブル用: Transformer Encoder + CTC Layer。言語モデル: KenLM (pruned 5-ngram)。句読点: XLM-Roberta-Large。
-- **アルゴリズム:** CTC Loss (推定)。KenLMデコーディング。pyctcdecode。
-- **テクニック:**
-    - **データ:** コンペデータ。MOSスコアとWERに基づくデータフィルタリング。外部テキストコーパス（IndicCorp, SLRなど）。
-    - **学習:** データフィルタリングにより局所的な過学習を抑制。大モデル(1B)は低LR(1e-5)で学習。
-    - **アンサンブル:** 複数ASRモデルの最終隠れ状態を結合し、追加のTransformer EncoderとCTC層で学習（元のASRモデルは凍結）。
-    - **言語モデル:** テキスト前処理で文字種を訓練データに限定、特殊トークン置換で語彙削減。5-gramモデルをプルーニング。推論時のメモリリーク対策（HuggingFaceパイプライン分解、decoder.cleanup()）。
-    - **句読点:** XLM-Roberta-Largeモデル使用。後処理で最終単語後に `|` または `?` を強制追加。
+* **アプローチ:** IndicWav2Vec + LM + 句読点モデル。特徴量レベルでのASRモデルアンサンブル。
+* **アーキテクチャ:** ASR: ai4bharat/indicwav2vec_v1_bengali (CTC) 複数 + Transformer Encoder + CTC層 (アンサンブル用)。LM: KenLM (5-gram、プルーニング)。句読点: XLM-Roberta-Large。
+* **アルゴリズム:** CTC、n-gram LM、トークン分類、Transformer Encoder。
+* **テクニック:** データフィルタリング (MOSスコア、複数モデルでのWER)。ASRアンサンブル (複数モデルの最終隠れ状態を結合し、追加のTransformer EncoderとCTC層で学習)。LMのテキストデータ前処理 (文字セット制限、特殊トークン置換)。LMのメモリ管理工夫 (pyctcdecode)。句読点モデルの後処理 (最後の単語後に句読点を強制)。
 
-**7位**
+**[7位](https://www.kaggle.com/competitions/bengaliai-speech/discussion/448074)**
 
-- **アプローチ:** IndicWav2VecをCTC Lossで学習。データフィルタリングを実施。句読点をモデル語彙とLMコーパスに含めて学習・デコードする独自のアプローチ。複数モデル出力のLMスコアによるリランキングでアンサンブル。
-- **アーキテクチャ:** ASR: IndicWav2Vec (CTC Loss)。言語モデル: KenLM (5-gram)。
-- **アルゴリズム:** CTC Loss。pyctcdecode。LMスコアによるリランキング。
-- **テクニック:**
-    - **データ:** コンペデータ、外部音声データ（kathbath, openslr37/53, ulca）。文字数/音声長比率およびWERに基づくデータフィルタリング。外部テキストコーパス（Indiccorpus v1/v2, BangaLM, mC4）。
-    - **学習:** フィルタリングしたクリーンデータで学習。段階的にデータを追加。
-    - **句読点:** モデルの語彙とLM学習用コーパスに句読点を含める。Wav2Vec2自体は句読点を予測しにくいが、LMデコード時に候補として考慮させる。
-    - **言語モデル:** 大規模テキストコーパス（45GB）で5-gram LM学習。alpha/beta/beam_widthを調整。
-    - **アンサンブル:** 3つのモデル（異なる学習データ/デコードパラメータ）の出力をそれぞれLMでスコアリングし、最高スコアの文を選択。
+* **アプローチ:** IndicWav2Vec + LM。句読点を語彙に含める。複数モデルの再スコアリングアンサンブル。
+* **アーキテクチャ:** ASR: IndicWav2Vec (CTC、カスタム語彙)。LM: KenLM (5-gram)。
+* **アルゴリズム:** CTC、n-gram LM。
+* **テクニック:** データフィルタリング (文字数/音声長比率、他モデル予測WER)。外部データ使用。句読点をモデル語彙とLMコーパスに含める。アンサンブル (複数モデルの出力をLMで再スコアリングし、最高スコアの文を選択)。
 
-**10位**
+**[10位](https://www.kaggle.com/competitions/bengaliai-speech/discussion/448126)**
 
-- **アプローチ:** Whisper-mediumモデル単体。データクリーニングと、長い音声/テキストに対応した推論処理が重要。
-- **アーキテクチャ:** OpenAI Whisper-medium。
-- **アルゴリズム:** Beam Search Decoding (num_beams=4)。WER/MOSスコアベースのデータフィルタリング。
-- **テクニック:**
-    - **データ:** コンペデータ。WER (<0.6) およびMOS (>1.5) に基づくフィルタリング。
-    - **Augmentation:** Concat Augment（2音声結合、約80%のデータに適用）、SpecAugment, SpecAugment++, CutOut。
-    - **推論:** 30秒超の音声、448トークン超の文に対応する推論処理（具体的な手法はノートブック参照）。
-
-
+* **アプローチ:** 単一Whisperモデル。データクリーニングと推論時の長文対応。
+* **アーキテクチャ:** ASR: OpenAI Whisper-medium。
+* **アルゴリズム:** Sequence-to-Sequence。
+* **テクニック:** データクリーニング (WER/MOSスコアに基づくルール)。複数音声を結合して学習データに使用。Augmentation (SpecAugment, SpecAugment++, CutOut)。推論時: 長時間音声 (>30秒) / 長文 (>448トークン) への対応。ビームサーチ (num_beams=4)。

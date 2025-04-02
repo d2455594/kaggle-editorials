@@ -1,161 +1,183 @@
 ---
 tags:
   - Kaggle
-startdate: 2023-05-10
-enddate: 2023-06-09
+  - パーキンソン病
+  - SMAPE
+  - LightGBM
+  - Transformer
+startdate: 2023-02-17
+enddate: 2023-05-19
 ---
 # Parkinson's Freezing of Gait Prediction
 [https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction)
 
 **概要 (Overview)**
 
-* **目的:** このコンペティションの目的は、パーキンソン病患者の日常生活における**すくみ足 (Freezing of Gait, FOG)** イベントを、**ウェアラブルセンサー（加速度計）**から得られた時系列データを用いて検出・予測する機械学習モデルを開発することです。特に、歩行開始時のすくみ足 (StartHesitation)、方向転換時のすくみ足 (Turn)、歩行中のすくみ足 (Walking) の3種類のイベントを対象とします。
-* **背景:** FOGはパーキンソン病患者によく見られる症状で、突然足が動かなくなり転倒のリスクを高めます。ウェアラブルセンサーによる客観的なFOG検出は、症状のモニタリングや治療法の評価、転倒予防システムの開発に役立ちます。センサーデータは個人の動きを継続的に記録しますが、日常生活の多様な動きの中からFOG特有のパターンを正確に識別することは困難です。
-* **課題:** 加速度センサーデータ（AccV, AccML, AccAP）からなる**時系列データ**から、FOGイベント（StartHesitation, Turn, Walking）が発生する**時間区間を正確に特定**することです。データには個人差や活動内容による変動が含まれ、またFOGイベントは比較的まれに発生するため、クラス不均衡の問題もあります。提供されるデータには2種類（tdcsfog, defog）があり、それぞれ異なる特性を持つ可能性があります。これは、本質的には多クラス（またはマルチラベル）の**時系列セグメンテーションタスク**です。
+* **目的:** このコンペティションの目的は、パーキンソン病患者の日常生活中の**ウェアラブルセンサー（主に加速度計）データ**を用いて、歩行中に足が意図せず一時的に止まってしまう**「すくみ足 (Freezing of Gait, FOG)」**の発生を検出・予測する機械学習モデルを開発することです。予測対象となるFOGには、歩き始めのすくみ足 (`StartHesitation`)、方向転換時のすくみ足 (`Turn`)、直線歩行中のすくみ足 (`Walking`) の3種類があります。
+* **背景:** すくみ足はパーキンソン病患者によく見られる症状であり、突然発生して数秒から数分間続くことがあります。これは転倒の主な原因となり、患者の移動能力やQOL（生活の質）を著しく低下させます。ウェアラブルセンサーを用いてFOGの発生をリアルタイムに近い形で検出し、患者に警告を発したり、運動療法を促したり、あるいは症状の客観的な評価や治療効果のモニタリングに役立てることが期待されています。
+* **課題:** FOGの発生パターンは個人差が大きく、また同じ個人内でも状況によって変動します。センサーデータには、FOG以外の様々な日常動作（歩行、静止、方向転換など）やノイズが含まれており、その中からFOG特有のパターンを正確に識別する必要があります。特に、FOGが始まる直前の予兆を捉えて「予測」することは困難な課題です。また、リアルタイムでの応用を視野に入れると、モデルの計算効率も考慮する必要があります。データセットには異なる条件下で収集された2種類（`tdcsfog`, `defog`）が含まれており、これらのデータの特性の違いに対応することも課題となります。
 
 **データセットの形式 (Dataset Format)**
 
-提供される主なデータは、被験者ごとの加速度センサーデータと、FOGイベントの時間区間を示すアノテーションです。
+提供される主なデータは、被験者が装着したウェアラブルセンサー（主に足首や腰に装着された加速度計）の時系列データと、ビデオ分析等によってラベル付けされたFOGイベントの発生時刻です。
 
-1.  **センサーデータ (tdcsfog/ & defog/ ディレクトリ):**
-    * 各サブディレクトリは被験者ごとのデータを含みます。
-    * ファイル形式は `.csv` です。
-    * 各ファイルには、`Time` (タイムスタンプ)、`AccV` (垂直方向加速度)、`AccML` (左右方向加速度)、`AccAP` (前後方向加速度) の列が含まれます。これらがモデルの**入力特徴量**となります。
-    * `tdcsfog` と `defog` は異なる研究プロジェクトまたはデバイスから収集されたデータである可能性があり、サンプリングレートや単位が異なる場合があります (`tdcsfog` は 128Hz, `defog` は 100Hz で m/s² と g の違いあり)。
-2.  **アノテーションデータ (`tdcsfog_metadata.csv`, `defog_metadata.csv`, `events.csv`):**
-    * `tdcsfog_metadata.csv`, `defog_metadata.csv`: 各センサーデータファイルに対応するメタデータ（被験者ID、記録IDなど）。
-    * `events.csv`: **ターゲット変数**となるFOGイベントのアノテーション情報。`Id` (記録ID)、`Start` (イベント開始時間)、`End` (イベント終了時間)、`Type` (StartHesitation, Turn, Walkingのいずれか) が含まれます。`Start` から `End` までの区間が、対応する `Type` のFOGイベントが発生した期間です。
-    * `tasks.csv`: `events.csv` に関連し、特定のタスク（歩行、方向転換など）が行われていた期間を示します。`Valid` 列と `Task` 列は、ラベル付けや評価の対象となる区間を示すために重要です (`defog` データに主に関連)。
-3.  **被験者情報 (`subjects.csv`):**
-    * 各被験者のメタデータ（年齢、性別、罹患期間など）。特徴量として利用されることもあります。
-4.  **`sample_submission.csv`:**
-    * 提出フォーマットのサンプル。`Id` (記録IDとタイムステップを組み合わせた識別子) と `StartHesitation`, `Turn`, `Walking` の各列に、そのタイムステップで各イベントが発生している確率（またはバイナリ）を予測します。
+1.  **センサーデータ (Training/Test Data):**
+    * `train/` および `test/` ディレクトリ内に、データソース（`tdcsfog`, `defog`）ごとのサブディレクトリがあり、その中に個々の試行 (`Id`) に対応する `csv` ファイルが格納されています。
+    * 各 `csv` ファイルには、時系列のセンサーデータが含まれます。
+        * `Time`: 記録開始からの経過時間（ミリ秒）。
+        * `AccV`: 垂直方向の加速度。
+        * `AccML`: 左右方向（内側/外側）の加速度。
+        * `AccAP`: 前後方向の加速度。
+        * サンプリング周波数は `tdcsfog` (128Hz) と `defog` (100Hz) で異なります。
+2.  **ラベルデータ (Training Labels):**
+    * `train/` 内の各 `csv` ファイルには、各タイムステップ (`Time`) におけるFOGイベントの発生状況を示す**ターゲット変数**のカラムが含まれます。
+        * `StartHesitation`: 歩き始めのFOGが発生していれば1、そうでなければ0。
+        * `Turn`: 方向転換中のFOGが発生していれば1、そうでなければ0。
+        * `Walking`: 直線歩行中のFOGが発生していれば1、そうでなければ0。
+    * `defog` データには追加のメタ情報カラムも含まれます。
+        * `Valid`: ラベルの信頼性を示すフラグ。
+        * `Task`: 被験者が特定のタスクを実行中かを示すフラグ。
+        * `Event`: ラベル付けに使用されたイベントの種類を示す（訓練データのみ）。
+3.  **メタデータ:**
+    * `subjects.csv`: 被験者の属性情報（年齢、性別、パーキンソン病罹病期間、運動機能評価スコア (UPDRS III)、すくみ足に関する自己評価 (NFOG-Q) など）。
+    * `tdcsfog_metadata.csv`, `defog_metadata.csv`: 各試行 (`Id`) のメタデータ。
+    * `tasks.csv`: 各試行で実施されたタスクの内容説明。
+    * `events.csv`: `defog` データのラベル付けイベントの詳細情報。
+4.  **未ラベルデータ (`notype`):**
+    * `defog/notype` ディレクトリには、FOGラベルが付与されていないセンサーデータが含まれます。これは、自己教師あり学習や擬似ラベリングなどの手法に利用可能です。
+5.  **`sample_submission.csv`**:
+    * 提出フォーマットのサンプル。`Id`（試行IDとタイムステップを結合した形式、例: `003f117e14_0`）と、`StartHesitation`, `Turn`, `Walking` それぞれの予測確率（0から1の実数）の列を持ちます。
 
 **評価指標 (Evaluation Metric)**
 
-* **指標:** **クラスごとの平均適合率 (Average Precision, AP) の平均 (mean Average Precision, mAP)**
+* **指標:** **イベントベースのAverage Precision (AP) at $IoU \in [0.3, 0.8]$ (mAP)**
 * **計算方法:**
-    1.  各FOGイベントタイプ（StartHesitation, Turn, Walking）について、Average Precision (AP) を計算します。APはPrecision-Recall曲線の下の面積であり、予測確率の閾値を変化させた際の適合率と再現率の関係を統合した指標です。イベント検出タスクで広く用いられます。
-    2.  3つのイベントタイプのAPを算術平均して、最終的なmAPスコアを算出します。
-        mAP = (AP<sub>StartHesitation</sub> + AP<sub>Turn</sub> + AP<sub>Walking</sub>) / 3
-* **意味:** モデルが各FOGイベントタイプをどれだけ正確に検出できているかを総合的に評価します。mAPは、イベントの有無だけでなく、予測確率の信頼度も考慮する指標です。スコアは **0から1** の範囲を取り、**高い**ほど性能が良いことを示します。この指標は、偽陽性（FOGでないのにFOGと予測）と偽陰性（FOGなのに見逃す）の両方をバランス良く評価しつつ、特にランキング（確率の高い予測が実際にFOGであるか）の質を重視します。
+    1.  モデルは各タイムステップに対して、3種類のFOG (`StartHesitation`, `Turn`, `Walking`) それぞれの発生確率を予測します。
+    2.  予測確率にある閾値を適用し、連続する陽性予測を1つのFOGイベント区間（開始時刻、終了時刻）として検出します。
+    3.  検出された各予測イベント区間と、正解ラベル中の各真のイベント区間との間で、**Intersection over Union (IoU)** を計算します。IoUは、2つの区間の重なり具合を示す指標です (重なり部分の時間長 / 和集合部分の時間長)。
+    4.  複数のIoU閾値（0.3, 0.35, 0.4, ..., 0.75, 0.8 の計11段階）それぞれについて、以下を行います:
+        * IoUが閾値以上の予測区間をTrue Positive (TP)、閾値未満または対応する真区間がない予測区間をFalse Positive (FP)、検出されなかった真区間をFalse Negative (FN) とします。
+        * 予測確率の閾値を様々に変化させ、適合率 (Precision = TP / (TP + FP)) と再現率 (Recall = TP / (TP + FN)) を計算し、適合率-再現率曲線 (Precision-Recall Curve) を描きます。
+        * このPR曲線の下面積が、そのIoU閾値における Average Precision (AP) となります。
+    5.  11段階のIoU閾値におけるAPを平均します。
+    6.  この平均APを、3種類のFOGイベント (`StartHesitation`, `Turn`, `Walking`) それぞれについて計算します。
+    7.  最後に、3種類のイベントの平均APをさらに平均した値 (mean Average Precision, mAP) が最終的なスコアとなります。
+* **意味:** この指標は、モデルがFOGイベントの「区間」をどれだけ正確に検出できているかを評価します。単なる時点ごとの分類精度ではなく、イベントの開始・終了タイミングを含めた区間全体の一致度が重要になります。複数のIoU閾値で評価することにより、様々なレベルの一致度に対するモデルの性能を総合的に評価します。スコアは0から1の範囲を取り、**高い**ほど良い性能を示します。
 
-要約すると、このコンペティションは、ウェアラブル加速度センサーの時系列データから3種類のパーキンソン病FOGイベントを検出するマルチラベル時系列セグメンテーションタスクです。データはセンサー記録とイベントアノテーションで構成され、性能は各イベントタイプのAverage Precisionの平均 (mAP、高いほど良い) によって評価されます。
+要約すると、このコンペティションは、ウェアラブルセンサーの時系列データから3種類のパーキンソン病すくみ足イベントの発生区間を予測するタスクです。データは加速度計データとイベントラベルで構成され、性能はイベント区間の検出精度を測るmAP（高いほど良い）によって評価されます。
 
 ---
 
 **全体的な傾向**
 
-パーキンソン病患者の加速度センサーデータからFOGイベント（すくみ足）を検出するこのタスクでは、時系列データの特性を捉えるモデルが中心となりました。特に**RNN (GRU, LSTM)** や **Transformer**、**1D CNN** が広く採用されています。多くのチームが、特性の異なる可能性のある `tdcsfog` と `defog` データセットに対して、**別々のモデルを学習させる**アプローチを取りました（ただし、統合して単一モデルで扱う解法も存在）。
+このコンペティションでは、パーキンソン病患者の加速度センサーデータから「すくみ足（FOG）」イベントを検出・予測するため、時系列データを効果的に扱えるモデルアーキテクチャと、データ処理戦略が鍵となりました。
 
-データの前処理として、**正規化**（Mean-Std, RobustScaler, StandardScaler）、**リサンプリング**（特にtdcsfogとdefogの周波数を合わせるため）、**ウィンドウ（シーケンス）分割**が重要でした。推論時に学習時よりも**長いシーケンス長を用いる**テクニックが複数の上位解法で有効と報告されており、これがスコア向上に大きく寄与した可能性があります。
-
-特徴量エンジニアリングとしては、加速度の差分や累積和、時間に関する特徴量（正規化時間、Sin/Cos時間）などが試されました。**Augmentation**（ノイズ付加、タイムワープ、フリップ、マグニチュード変更など）も多くの解法で用いられました。Defogデータに含まれるラベルなし区間（`notype`）や `Valid`/`Task` フラグの扱い、`Event` 列を利用した**疑似ラベリング**もスコア向上に貢献したケースが見られます。
-
-モデルアーキテクチャでは、単純なRNNやCNNだけでなく、**Residual接続**、**Attention機構**、**Squeeze-and-Excitation**、**U-Net構造**、**WaveNetブロック**などを組み込んだより複雑なものが試されました。Vision Transformerのように時系列データを**パッチ化**してTransformerに入力するアプローチも有効でした。
-
-学習においては、適切な損失関数（BCE Loss, Cross Entropy）、オプティマイザ（AdamW, Ranger）、学習率スケジュール（Cosine Annealing, Linear Warmup）の選択が重要です。**アンサンブル**（複数モデル、複数Fold、複数シード）は、最終的なスコアを向上させるための一般的なテクニックでした。
+1.  **モデルアーキテクチャ:**
+    * **RNN (GRU/LSTM):** 時系列データの長期依存関係を捉える能力から、多くのチームが **GRU** や **LSTM**（特に双方向: BiGRU/BiLSTM）を採用しました。Residual Connectionを追加したカスタムGRU（4位）も有効でした。
+    * **Transformer:** Attention機構を用いた **Transformer Encoder** も非常に強力で、1位や3位の解法で中心的な役割を果たしました。パッチ化（時系列データを短い区間に分割）や位置エンコーディングと組み合わせて使用されました。
+    * **CNN (1D/2D):** 1D CNNは特徴抽出器としてRNN/Transformerの前段に置かれたり（3位, 5位のWaveNet）、1D ResNetとして単独で用いられたりしました（8位）。また、時間周波数表現（スペクトログラム、ウェーブレット）を入力とする **2D CNN** や **U-Net** 構造も有効でした（6位, 10位の1D U-Net+SE）。
+2.  **データ処理と特徴量:**
+    * **入力:** 主に3軸加速度データ (`AccV`, `AccML`, `AccAP`) が使用されました。
+    * **正規化:** 各試行（Id）ごとにデータを正規化（StandardScaler、RobustScaler、平均・標準偏差正規化など）するのが一般的でした。
+    * **シーケンス処理:**
+        * **パッチ化/チャンク化:** 長い時系列データを固定長のパッチやチャンクに分割してモデルに入力（1位, 3位, 5位, 6位など）。
+        * **シーケンス長:** 訓練時と推論時で異なるシーケンス長を使う戦略（特に2位）が有効でした。訓練時は計算効率のために短く（例: 1000-5000）、推論時はより長いコンテキストを利用するために長く（例: 3000-30000）設定し、予測は中央部分を利用するなどの工夫が見られました。
+        * **ダウンサンプリング/リサンプリング:** サンプリング周波数を下げる（4位）または統一する（5位, 6位）処理も行われました。
+    * **特徴量エンジニアリング:** 加速度データの差分、累積和、時間に関する特徴量（経過時間、Sin/Cosエンコーディング）などが追加されました（2位, 6位, 10位）。スペクトログラムやウェーブレット変換も特徴抽出の一環と見なせます（6位）。
+3.  **データセット戦略:**
+    * **tdcsfog vs defog:** 2つのデータソースを別々にモデル化するチーム（1位, 2位, 6位）と、統合して単一モデルで扱うチーム（3位, 4位, 5位, 8位, 10位）に分かれました。
+    * **未ラベルデータ (`notype`):** `defog` の未ラベルデータを **擬似ラベリング**（2位, 6位）や**自己教師あり事前学習**（5位）に活用する試みが見られました。
+4.  **学習・推論テクニック:**
+    * **CV:** 被験者ID (`Subject`) でグループ化し、層化k分割交差検証 (StratifiedGroupKFold) を行うのが標準的でした。
+    * **損失関数:** Binary Cross Entropy (BCE) が基本。ラベルの有効性（`Valid`, `Task`）を考慮してマスクする処理（2位, 4位）も行われました。
+    * **Augmentation:** 時間伸縮、ノイズ付加、左右反転（AccMLの符号反転）、スケール変更など、様々なデータ拡張が試されました（3位, 6位, 10位）。
+    * **アンサンブル:** 複数モデル（異なるアーキテクチャ、Fold、シード、ターゲット重み、スナップショットなど）の予測確率を平均化するアンサンブルが一般的でした。
+    * **ターゲット解像度低減:** 1位チームはターゲットラベルの解像度を下げる（最大値プーリング）ことで性能を向上させました。
 
 **各解法の詳細**
 
 **[1位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/416026)**
 
-* **アプローチ:** tdcsfogとdefogで別モデル。Transformer EncoderとBiLSTMの組み合わせ。Vision Transformer風のパッチ化。ターゲットの解像度低減。
-* **アーキテクチャ:** FOGEncoder (Transformer Encoder Layer x5 + Positional Encoding) + BiLSTM x2 + Dense。
-* **アルゴリズム:** BCE Loss (マスク適用)。Adam (カスタム学習率スケジュール、Warmup付き)。
+* **アプローチ:** Transformer Encoder + BiLSTM。**パッチ化**と**ターゲット解像度低減**。tdcsfog/defog別モデル。
+* **アーキテクチャ/アルゴリズム:** Transformer Encoder (L=5, H=6, D=320/256) + BiLSTM (L=2)。TensorFlow実装。
 * **テクニック:**
-    * **前処理:** Mean-Std正規化。ゼロパディング。パッチ化 (例: 15552点を864x(18x3=54)のパッチに)。ターゲットもパッチごとにmax poolingで解像度低減。
-    * **入力:** 加速度3軸のみ。メタデータ未使用。
-    * **モデル:** tdcsfog用4モデル、defog用4モデルを学習し、それぞれ平均でアンサンブル。モデルごとにハイパーパラメータ（次元数、Head数、Layer数など）や学習データ分割を変更。
-    * **Augmentation:** 学習時にPositional Encodingをランダムにシフト。
-    * **推論:** 予測結果を元の解像度に復元 (`tf.tile`)。
+    * **入力:** 3軸加速度。各シーケンスを正規化。
+    * **パッチ化:** 時系列を固定長パッチ (サイズ18/14) に分割。
+    * **ターゲット処理:** ターゲットラベルも同じパッチサイズで分割し、各パッチ内の最大値を取ることで解像度を低減。推論時に `tf.tile` で元の解像度に戻す。
+    * **データ:** tdcsfogとdefogで別モデル。メタデータ未使用。
+    * **学習:** Adam (カスタムSchedule), BCE Loss (マスク考慮)。位置エンコーディングにランダムロールAugmentation。
 
 **[2位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/416057)**
 
-* **アプローチ:** tdcsfogとdefogで別モデル。両方ともGRUベース。短いシーケンスで学習し、長いシーケンスで推論。Defogでは疑似ラベル活用。
-* **アーキテクチャ:** GRU (多層)。
-* **アルゴリズム:** BCEWithLogitsLoss (重み付きあり)。AdamW。Linear Schedule with Warmup。StratifiedGroupKFold (Subject単位)。
+* **アプローチ:** GRUモデル。**訓練/推論時のシーケンス長変更**。**擬似ラベリング**。ターゲット別重み付け学習アンサンブル。tdcsfog/defog別モデル。
+* **アーキテクチャ/アルゴリズム:** BiGRU。PyTorch実装。BCEWithLogitsLoss, AdamW, Linear Warmupスケジューラ。
 * **テクニック:**
-    * **特徴量:** 加速度3軸 + 差分 + 累積和 (tdcsfog)。加速度3軸 + 差分 (defog)。
-    * **前処理:** RobustScaler (tdcsfog), StandardScaler (defog)。IDごとに正規化。
-    * **シーケンス:** 学習時は短く (tdcsfog: 1000, defog: 5000)、推論時は長く (tdcsfog: 3000/5000, defog: 15000/30000)。オーバーラップさせてシーケンス作成。
-    * **疑似ラベル:** Defogの `notype` データを `Event` 列に基づいて疑似ラベリングし学習に利用（複数ラウンド実施）。
-    * **重み付き損失:** 特定ターゲットの損失重みを上げて学習するモデルを作成し、そのターゲットの予測のみを使用。
-    * **アンサンブル:** 複数モデル（均一損失、重み付き損失）の結果を重み付き平均。
-    * **モデル選択:** CVとPublicスコアの相関が後半で崩れたため、Publicスコアでモデル選択、CVでシーケンス長を決定。
+    * **シーケンス長:** 訓練時は短いシーケンス長 (tdcsfog: 1000, defog: 5000)、推論時は長いシーケンス長 (tdcsfog: 3000/5000, defog: 15000/30000) を使用し、中央部分の予測を利用。
+    * **データ:** tdcsfogとdefogで別モデル。加速度+差分+累積和特徴量。RobustScaler/StandardScalerで正規化。
+    * **擬似ラベリング:** defogの `notype` データに対し、`Event` カラム情報を用いてハードラベルを作成し、学習に利用（複数ラウンド実施）。
+    * **アンサンブル:** ターゲットごとに損失の重みを変えて学習したモデル（例: StartHesitationの重みを0.6、他を0.4）を複数作成し、それぞれの得意なターゲット予測をアンサンブル。
 
 **[3位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/417717)**
 
-* **アプローチ:** tdcsfogとdefogに単一モデルを適用。Transformer + RNN。
-* **アーキテクチャ:** DeBERTa/Vision Transformer/Vision Transformer (Relative Position) Encoder + LSTM/GRU Decoder (通常2-4層、RNNは単層)。
-* **アルゴリズム:** (詳細不明だが、一般的なシーケンスモデルの学習法と推測される)
+* **アプローチ:** Transformer (DeBERTa/ViT) + RNN (LSTM/GRU)。パッチ化。データ拡張。tdcsfog/defog統合モデル。
+* **アーキテクチャ/アルゴリズム:** Transformer Encoder (DeBERTa, ViT, ViT Relative Positional Encoding) + LSTM/GRU (通常1層、双方向かは不明)。
 * **テクニック:**
-    * **パッチ化:** パッチサイズ7-13、シーケンス長192-384パッチ。
-    * **Augmentation:** ストレッチ、クロッピング、アブレーション、累積ガウスノイズなど、重度のAugmentation。
+    * **パッチ化:** 時系列データをパッチ (サイズ7-13) に分割。シーケンス長は192-384パッチ。
+    * **データ拡張:** ストレッチング、クロッピング、アブレーション（一部データ欠損）、累積ガウスノイズなど、重度のデータ拡張を適用。
+    * **データ:** tdcsfog/defog統合。加速度データを使用。
 
 **[4位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/416410)**
 
-* **アプローチ:** tdcsfogとdefogを統合し単一モデルで学習。Residual接続を持つ多層BiGRU。
-* **アーキテクチャ:** MultiResidualBiGRU (入力FC -> LayerNorm -> ResidualBiGRUブロック x N層 -> 出力FC)。ResidualBiGRUブロック内 (GRU -> FC -> LayerNorm -> ReLU -> FC -> LayerNorm -> ReLU -> Skip Connection)。
-* **アルゴリズム:** Cross Entropy Loss。Ranger Optimizer (Adam, AdamWも試行)。Cosine Annealing Schedule。バッチサイズ1。混合精度学習、勾配クリッピング。
+* **アプローチ:** **Residual BiGRU** (カスタムアーキテクチャ)。tdcsfog/defog統合モデル。ダウンサンプリング。
+* **アーキテクチャ/アルゴリズム:** 入力FC + LayerNorm + ReLU + (ResidualBiGRUブロック) x N層 + 出力FC。ResidualBiGRUブロックは BiGRU + FC + LayerNorm + ReLU + FC + LayerNorm + ReLU + Skip Connection で構成。PyTorch実装。CrossEntropyLoss (4クラス: 3種FOG + No-Activity), Rangerオプティマイザ, Cosine Annealingスケジューラ。
 * **テクニック:**
-    * **前処理:** 加速度3軸のみ使用。50Hzにダウンサンプリング。単位変換 (defog)。`Valid` と `Task` でマスク作成。シーケンスごとにStandardScalerで正規化。
-    * **4クラス分類:** FOG 3クラス + "no-activity" クラスを追加して学習。
-    * **CV:** 主モデルはTrain/Validation Split (80/20)。後にStratified K-Fold (k=5) でアンサンブルも試行（スコア微減）。
-    * **入力:** ダウンサンプルしたシーケンス全体を一度に入力（バッチサイズ1）。
-    * **GRU初期化:** 被験者メタデータ（年齢、性別など）をFCで射影し、GRUの初期隠れ状態として使用する試み（プロトタイプ）。1D Convでの特徴抽出も試行。
+    * **データ:** tdcsfog/defog統合。加速度データのみ使用。50Hzにダウンサンプリング。標準化。
+    * **学習:** バッチサイズ1で全シーケンスを入力。defogの未ラベル区間 (`Valid`=False or `Task`=False) は入力には含めるが損失計算からは除外。
+    * **その他:** メタデータ（年齢など）をGRUの初期隠れ状態に利用するモデルも試行（スコアはやや劣る）。
 
 **[5位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/418275)**
 
-* **アプローチ:** WaveNetブロックとGRUの組み合わせ。tdcsfog/defog共通モデル。事前学習の試み。ONNX変換によるCPU推論。
-* **アーキテクチャ:** Wave_Block (Dilated Conv) x3 + BiGRU (4層) + Dense。
-* **アルゴリズム:** (損失関数は明記されていないが、BCE Lossなどが一般的)。(Optimizer, Schedulerは不明)。GroupKFold (Subject単位)。
+* **アプローチ:** **WaveNet + GRU**。**自己教師あり事前学習**。tdcsfog/defog統合モデル。
+* **アーキテクチャ/アルゴリズム:** 1D CNN (WaveNetブロック: Dilated Conv) + BiGRU + Linear。PyTorch実装。
 * **テクニック:**
-    * **前処理:** ウィンドウ分割 (サイズ2000, オーバーラップ500)。tdcsfogを100Hzにリサンプリング (librosaバージョンに注意)。
-    * **データセット:** tdcsfog/defogからランダムにウィンドウを選択してバッチ作成。
-    * **事前学習:** ラベルなしデータで時系列の次ステップ予測タスクによる事前学習を試行 (WaveNet部分のみ)。
-    * **モデルバリアント:** `Valid` フラグの扱い方や重み保存戦略が異なる複数のモデル (v1, v2, v3) を学習。
-    * **推論:** 長いウィンドウ (16000 or 20000) で分割して推論。ONNXに変換してCPUで高速化。複数モデル/重みを平均でアンサンブル。
-    * **結果:** 事前学習モデルを含むアンサンブルがPublic LBでは良かったがPrivate LBでは低下。GPU推論では事前学習モデルが有効だった可能性。
+    * **データ:** tdcsfog/defog統合。加速度データのみ。tdcsfogデータを100Hzにリサンプリング（ただしバージョン依存性に注意）。
+    * **シーケンス処理:** 固定長のウィンドウ (サイズ2000、重複500) で分割して学習。推論時はより長いウィンドウ (16000/20000) を使用。
+    * **事前学習:** 未ラベルデータ (`notype` 及びラベル付きデータの一部) を用い、時系列の次の値を予測するタスクでWaveNet部分を事前学習。
+    * **アンサンブル:** 事前学習あり/なし、検証データ設定違いなど、複数の学習済みモデルを平均アンサンブル。
+    * **推論:** ONNX/OpenVINOに変換しCPUで高速化。
 
 **[6位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/415992)**
 
-* **アプローチ:** スペクトログラム、ウェーブレット、1D Convベースの複数モデルのアンサンブル。tdcsfog/defog共通モデル。
-* **アーキテクチャ:**
-    * **Spectrogram:** STFT -> 2D CNN (例: ResNet18) -> U-Net Decoder -> Pooling -> Transformer Encoder -> Dense。
-    * **Wavelet:** CWT -> 2D CNN (例: ResNet18/34) -> Pooling -> Transformer Encoder -> Dense。
-    * **1D Conv:** 1D CNN + メタデータ特徴量 + Cumsum特徴量。
-* **アルゴリズム:** (詳細不明だが、画像/時系列モデルの標準的な学習法)。ネストしたCV (Outer/Inner Folds)。
+* **アプローチ:** **スペクトログラム/ウェーブレット変換 + 2D CNN/U-Net + Transformer** および **1D CNN** の多様なモデルアンサンブル。
+* **アーキテクチャ/アルゴリズム:**
+    * 2D系: STFT/CWT + ResNet18/34 (+ U-Net Decoder) + Transformer Encoder (Attention Bias付き)。
+    * 1D系: 1D CNN。
 * **テクニック:**
-    * **特徴量:** 加速度3軸 + 時間特徴量 (`pct_time`)。一部モデルでメタデータも使用。
-    * **スペクトログラム/ウェーブレット:** 時間次元のダウンサンプリング。周波数エンコーディング追加。低周波数帯のみ使用 (0-15Hz)。
-    * **リサンプリング:** 32, 64, 128Hzなど様々な周波数で試行。Defogをtdcsfogに合わせる。
-    * **Transformer:** 自己注意に距離ベースのバイアスマスクを適用。
-    * **Augmentation:** Time Stretch, Gaussian Noise, Pitch Shift, Wave Scale Aug, Time Feature Shift Augなど (スペクトログラム/ウェーブレット)。
-    * **1D Conv:** Defog/tdcsfogの時間軸整列、Outlier被験者の重み低減、Snapshot Ensembling、`notype` データ活用 (max pooling予測)。
-    * **アンサンブル:** 複数モデルタイプの結果を重み付き平均 (GP_minimizeで重み探索)。
+    * **入力:** 加速度3軸 + 時間特徴量 (`pct_time`) + メタデータ (1D CNNのみ)。
+    * **スペクトログラム/ウェーブレット:** STFT/CWTで時間周波数表現に変換。時間次元はダウンサンプリングされる（予測は0.5秒ウィンドウ単位）。高周波ビンは破棄。周波数エンコーディングも入力に追加。
+    * **Transformer Attention Bias:** 時間的に近い部分に高いAttention重みが向くようにバイアスを追加。
+    * **データ拡張:** Audiomentationsライブラリを使用（時間伸縮、ノイズ、ピッチシフトなど）+ スケール変更、時間特徴量シフト。
+    * **CV:** ネストしたCV (Outer 4-fold, Inner 4-fold)。
+    * **アンサンブル:** 複数モデルの重みをGP最適化 (Bayesian Optimization) で決定。外れ値と思われる被験者 (`2d57c2`) の損失をダウンスケール。
 
 **[8位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/416021)**
 
-* **アプローチ:** ベースライン (Mayukh18氏) の改良。1D-ResNetを使用。5-Fold CVアンサンブル。tdcsfog/defog共通モデル。
-* **アーキテクチャ:** 1D-ResNet (3チャネル入力)。
-* **アルゴリズム:** (損失関数は不明、ベースラインはBCE)。(Optimizerは不明、ベースラインはAdam)。ReduceLROnPlateauスケジューラ (LR=0.001から開始)。
+* **アプローチ:** **1D-ResNet**。公開ノートブックベース。5-Fold CVアンサンブル。
+* **アーキテクチャ/アルゴリズム:** 1D-ResNet。PyTorch実装。
 * **テクニック:**
-    * **データセット:** ベースラインのDatasetクラスを1D-ResNet用に変更。
-    * **ウィンドウ:** 1000msのカット、未来予測50ms。(ベースラインから変更)。
-    * **CV:** ベースラインのFold定義に基づき5つのモデルを学習し、アンサンブル。
+    * **データ:** tdcsfog/defog統合。加速度データのみ。
+    * **シーケンス処理:** 1000msのカットを使用、未来50msを予測する設定（詳細は元ノートブック参照）。
+    * **学習:** ReduceLROnPlateauスケジューラ使用。
+    * **アンサンブル:** 5-Fold CVで学習したモデルを平均アンサンブル。
 
 **[10位](https://www.kaggle.com/competitions/tlvmc-parkinsons-freezing-gait-prediction/discussion/416513)**
 
-* **アプローチ:** Squeeze-and-Excitation付き1D U-Net。非常に長いコンテキストウィンドウ。tdcsfog/defog共通モデル。
-* **アーキテクチャ:** 1D U-Net (5 Encoder/Decoderペア) + Squeeze-and-Excitationブロック。
-* **アルゴリズム:** (損失、Optimizer、Schedulerは不明)。
+* **アプローチ:** **1D U-Net + Squeeze-and-Excitation (SE)**。長いコンテキスト。データ拡張。TTA。
+* **アーキテクチャ/アルゴリズム:** 1D Conv U-Net (Encoder/Decoder x5) + SEブロック。
 * **テクニック:**
-    * **特徴量:** 生の加速度3軸 (正規化なし) + 時間特徴量 (NormalizedTime, SinNormalizedTime)。周波数特徴量は効果なし。
-    * **コンテキスト長:** 10240サンプルという非常に長いウィンドウで処理。
-    * **Augmentation (学習時):** Random Low Pass Filtering, Random Time Warp, Random Flip (AccML), Random Magnitude Warping, Noisy Time Features。
-    * **Augmentation (推論時 - TTA):** AccMLフリップ有無、オーバーラップウィンドウ推論 (Stride=Window/8)。計16回の予測を平均。
-    * **正規化:** 正規化は有害と判断し、行わない。サンプルレートや単位も統一せず。
-    * **アンサンブル:** 同じハイパーパラメータ、同じFoldだが異なる乱数シードで学習した2つのモデルをアンサンブル（スコアの良いものを選別）。
-
-
+    * **入力:** 加速度3軸 + 時間特徴量 (`NormalizedTime`, `SinNormalizedTime`)。正規化は行わない。
+    * **シーケンス長:** 非常に長いコンテキストウィンドウ (10240サンプル) を使用。
+    * **データ拡張:** ランダムローパスフィルタ、時間ワープ（線形補間）、左右反転（AccML符号反転）、強度ワープ（平均からの差分にガウスノイズ係数を乗算）、時間特徴量ノイズ。
+    * **TTA:** 左右反転、オーバーラップウィンドウ（ストライド1/8）で16回の予測を平均。
+    * **データ:** tdcsfog/defog統合。リサンプリングや単位変換は行わない。
+    * **アンサンブル:** 同じハイパーパラメータ、同じCV Foldで、異なるランダムシードで学習した2モデルをアンサンブル（モデル選択はCVとLBスコアに基づく）。
